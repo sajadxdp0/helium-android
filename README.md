@@ -1,8 +1,18 @@
-# Helium for Android
+<p align="center">
+  <img src="helium-mark.svg" alt="Helium snowflake on a red rounded square" width="104">
+</p>
 
-An independent, privacy-minded Android browser inspired by Helium. Android chrome uses Jetpack Compose and Material 3, GeckoView renders web pages, and a Rust native library handles address and search resolution through JNI. Compose and GeckoView remain in Kotlin because GeckoView's Android API is a Java/Kotlin integration point.
+<h1 align="center">Helium for Android</h1>
 
-> This is an unofficial community project. It is not affiliated with or endorsed by the Helium maintainers.
+<p align="center">
+  A privacy-minded Android browser with native Compose UI, Mozilla GeckoView, and a Rust URL resolver.
+</p>
+
+<p align="center">
+  <a href="https://github.com/sajadxdp0/helium-android/releases/latest">Download the latest release</a>
+</p>
+
+> An independent community project; not affiliated with or endorsed by the Helium maintainers.
 
 ## What works
 
@@ -63,4 +73,3 @@ The supplied `helium-main.zip` is the Helium desktop source repository. Its READ
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for notices about the Helium branding asset and embedded libraries. See [LICENSE](LICENSE) for the project license.
 
-> An independent Android browser with native Compose UI, GeckoView rendering, and a Rust JNI core.

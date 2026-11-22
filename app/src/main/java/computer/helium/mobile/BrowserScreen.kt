@@ -282,12 +282,18 @@ private fun BrowserHeader(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(R.drawable.helium_mark),
-                contentDescription = "Helium",
+            Surface(
                 modifier = Modifier.size(30.dp),
-                contentScale = ContentScale.Fit,
-            )
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFFC83D4F),
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_helium_mark),
+                    contentDescription = "Helium",
+                    modifier = Modifier.fillMaxSize().padding(3.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text("helium", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
@@ -491,11 +497,18 @@ private fun HomePanel(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(R.drawable.helium_mark),
-                        contentDescription = null,
+                    Surface(
                         modifier = Modifier.size(38.dp),
-                    )
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFC83D4F),
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_helium_mark),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
                     Text(
                         "A little more room to breathe.",
                         modifier = Modifier.padding(start = 12.dp),
