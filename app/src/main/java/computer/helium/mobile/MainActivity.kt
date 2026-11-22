@@ -1,6 +1,7 @@
 package computer.helium.mobile
 
 import android.content.Intent
+import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -298,11 +299,11 @@ class MainActivity : ComponentActivity() {
 
             override fun onLocationChange(
                 session: GeckoSession,
-                url: String,
+                url: String?,
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
-                hasUserGesture: Boolean?,
+                hasUserGesture: Boolean,
             ) {
-                tab.url = url
+                tab.url = url.orEmpty()
                 persistCurrentVisit(tab)
                 saveTabs()
             }

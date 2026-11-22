@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "computer.helium.mobile"
     compileSdk = 37
+    compileSdkMinor = 2
 
     defaultConfig {
         applicationId = "computer.helium.mobile"
@@ -21,6 +22,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -33,6 +40,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("org.mozilla.geckoview:geckoview-stable:160.0.20261116130455")
+    implementation("org.mozilla.geckoview:geckoview:160.0.20261116130455")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
