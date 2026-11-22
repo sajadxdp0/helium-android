@@ -266,10 +266,12 @@ class MainActivity : ComponentActivity() {
     private fun attachDelegates(tab: BrowserTab) {
         tab.session.setProgressDelegate(object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
-                tab.url = url
+                if (tab.url != url) {
+                    tab.url = url
+                    saveTabs()
+                }
                 tab.loading = true
                 tab.progress = 0f
-                persistCurrentVisit(tab)
             }
 
             override fun onProgressChange(session: GeckoSession, progress: Int) {
@@ -279,7 +281,6 @@ class MainActivity : ComponentActivity() {
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 tab.loading = false
                 if (success && tab.url.startsWith("http")) recordVisit(tab)
-                saveTabs()
             }
         })
         tab.session.setContentDelegate(object : GeckoSession.ContentDelegate {
@@ -306,9 +307,11 @@ class MainActivity : ComponentActivity() {
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
-                tab.url = url.orEmpty()
-                persistCurrentVisit(tab)
-                saveTabs()
+                val location = url.orEmpty()
+                if (tab.url != location) {
+                    tab.url = location
+                    saveTabs()
+                }
             }
         })
         tab.session.setPermissionDelegate(object : GeckoSession.PermissionDelegate {
@@ -345,10 +348,6 @@ class MainActivity : ComponentActivity() {
         history.add(0, BrowserEntry(tab.title.ifBlank { tab.url }, tab.url))
         while (history.size > 100) history.removeAt(history.lastIndex)
         persistEntries(PREF_HISTORY, history)
-    }
-
-    private fun persistCurrentVisit(tab: BrowserTab) {
-        if (tab.url.isNotBlank()) saveTabs()
     }
 
     private fun restoreEntries(key: String, destination: MutableList<BrowserEntry>) {

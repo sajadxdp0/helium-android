@@ -49,16 +49,20 @@ Set `ANDROID_HOME` to your Android SDK directory, then run:
 ANDROID_HOME="$HOME/Android/Sdk" ./gradlew assembleDebug
 ```
 
-The debug APK is created at:
+The debug build emits one APK per supported ABI:
 
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
+| Target device | APK |
+| --- | --- |
+| 64-bit ARM Android device | `app-arm64-v8a-debug.apk` |
+| 32-bit ARM Android device | `app-armeabi-v7a-debug.apk` |
+| x86_64 emulator | `app-x86_64-debug.apk` |
 
-Install it on a connected device with:
+Release builds create matching ABI-specific APKs in `app/build/outputs/apk/release/`. Choose the APK matching your device; no universal APK is generated. This avoids downloading GeckoView and Rust native libraries for other processor architectures.
+
+Install the x86_64 emulator build with:
 
 ```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-x86_64-debug.apk
 ```
 
 ## Helium references
