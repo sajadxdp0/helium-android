@@ -19,7 +19,6 @@ tasks.register<Exec>("buildRustCore") {
         "cargo", "ndk",
         "-t", "arm64-v8a",
         "-t", "armeabi-v7a",
-        "-t", "x86",
         "-t", "x86_64",
         "-o", outputDirectory.absolutePath,
         "build", "--release",
@@ -44,7 +43,7 @@ android {
         versionCode = 3
         versionName = "0.3.0"
         ndk {
-            abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }
 
