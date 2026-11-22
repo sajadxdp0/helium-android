@@ -24,7 +24,8 @@ class MainActivity : ComponentActivity() {
     private val bookmarks = mutableStateListOf<BrowserEntry>()
     private var activeTabId by mutableStateOf("")
     private var searchEngineIndex by mutableIntStateOf(0)
-    private lateinit var runtime: org.mozilla.geckoview.GeckoRuntime
+    private val runtime: org.mozilla.geckoview.GeckoRuntime
+        get() = (application as HeliumApplication).runtime
 
     val browserTabs: List<BrowserTab> get() = tabs
     val historyEntries: List<BrowserEntry> get() = history
@@ -36,7 +37,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        runtime = (application as HeliumApplication).runtime
         searchEngineIndex = preferences.getInt(PREF_SEARCH_ENGINE, 0)
             .coerceIn(SEARCH_ENGINES.indices)
         restoreEntries(PREF_HISTORY, history)
@@ -54,16 +54,14 @@ class MainActivity : ComponentActivity() {
         val session = GeckoSession()
         val tab = BrowserTab(session = session, initialUrl = url)
         attachDelegates(tab)
-        session.open(runtime)
         tabs.add(tab)
         activateTab(tab)
-        if (url.isNotBlank()) session.loadUri(url)
         saveTabs()
     }
 
     fun selectTab(tab: BrowserTab) {
         if (tab.id == activeTabId) return
-        currentTab?.let {
+        currentTab?.takeIf { it.sessionOpened }?.let {
             it.session.setFocused(false)
             it.session.setActive(false)
         }
@@ -73,8 +71,11 @@ class MainActivity : ComponentActivity() {
 
     fun closeTab(tab: BrowserTab) {
         if (tabs.size == 1) {
-            tab.session.stop()
-            tab.session.close()
+            if (tab.sessionOpened) {
+                tab.session.stop()
+                tab.session.close()
+                tab.sessionOpened = false
+            }
             tabs.remove(tab)
             activeTabId = ""
             newTab()
@@ -83,9 +84,12 @@ class MainActivity : ComponentActivity() {
 
         val wasActive = tab.id == activeTabId
         val oldIndex = tabs.indexOf(tab)
-        tab.session.setFocused(false)
-        tab.session.setActive(false)
-        tab.session.close()
+        if (tab.sessionOpened) {
+            tab.session.setFocused(false)
+            tab.session.setActive(false)
+            tab.session.close()
+            tab.sessionOpened = false
+        }
         tabs.remove(tab)
         if (wasActive) activateTab(tabs[oldIndex.coerceAtMost(tabs.lastIndex)])
         saveTabs()
@@ -104,7 +108,7 @@ class MainActivity : ComponentActivity() {
         tab.title = ""
         tab.progress = 0f
         tab.loading = true
-        tab.session.loadUri(address)
+        tab.pendingNavigation = address
         saveTabs()
     }
 
@@ -112,7 +116,7 @@ class MainActivity : ComponentActivity() {
 
     fun goHome() {
         currentTab?.let { tab ->
-            tab.session.stop()
+            if (tab.sessionOpened) tab.session.stop()
             tab.url = ""
             tab.title = ""
             tab.loading = false
@@ -132,7 +136,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun reloadOrStop() {
-        currentTab?.let { if (it.loading) it.session.stop() else it.session.reload() }
+        currentTab?.takeIf { it.sessionOpened }?.let { if (it.loading) it.session.stop() else it.session.reload() }
     }
 
     fun addBookmark() {
@@ -167,10 +171,13 @@ class MainActivity : ComponentActivity() {
 
     fun clearBrowsingData() {
         val sessions = tabs.toList()
-        sessions.forEach {
-            it.session.setFocused(false)
-            it.session.setActive(false)
-            it.session.close()
+        sessions.forEach { tab ->
+            if (tab.sessionOpened) {
+                tab.session.setFocused(false)
+                tab.session.setActive(false)
+                tab.session.close()
+                tab.sessionOpened = false
+            }
         }
         tabs.clear()
         activeTabId = ""
@@ -199,22 +206,31 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         saveTabs()
-        currentTab?.session?.setFocused(false)
+        currentTab?.takeIf { it.sessionOpened }?.session?.setFocused(false)
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
-        currentTab?.session?.setFocused(true)
+        currentTab?.takeIf { it.sessionOpened && it.url.isNotBlank() }?.session?.setFocused(true)
     }
 
     override fun onDestroy() {
-        tabs.forEach {
-            it.session.setFocused(false)
-            it.session.setActive(false)
-            it.session.close()
+        tabs.forEach { tab ->
+            if (tab.sessionOpened) {
+                tab.session.setFocused(false)
+                tab.session.setActive(false)
+                tab.session.close()
+                tab.sessionOpened = false
+            }
         }
         super.onDestroy()
+    }
+
+    fun ensureSessionOpen(tab: BrowserTab) {
+        if (tab.sessionOpened) return
+        tab.session.open(runtime)
+        tab.sessionOpened = true
     }
 
     private fun restoreTabs() {
@@ -233,21 +249,18 @@ class MainActivity : ComponentActivity() {
             val session = GeckoSession()
             val tab = BrowserTab(session = session, initialUrl = url)
             attachDelegates(tab)
-            session.open(runtime)
             tabs.add(tab)
         }
         val selected = preferences.getInt(PREF_ACTIVE_TAB, 0).coerceIn(tabs.indices)
         activateTab(tabs[selected])
-        tabs.forEachIndexed { index, tab ->
-            if (index != selected && tab.url.isNotBlank()) tab.session.loadUri(tab.url)
-        }
-        currentTab?.takeIf { it.url.isNotBlank() }?.session?.loadUri(currentTab?.url.orEmpty())
     }
 
     private fun activateTab(tab: BrowserTab) {
         activeTabId = tab.id
-        tab.session.setActive(true)
-        tab.session.setFocused(true)
+        if (tab.sessionOpened && tab.url.isNotBlank()) {
+            tab.session.setActive(true)
+            tab.session.setFocused(true)
+        }
     }
 
     private fun attachDelegates(tab: BrowserTab) {

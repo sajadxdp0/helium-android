@@ -166,7 +166,7 @@ fun BrowserScreen(activity: MainActivity) {
                             onPrivacy = { sheet = BrowserSheet.PRIVACY },
                         )
                     } else {
-                        GeckoPage(active)
+                        GeckoPage(activity, active)
                     }
                 }
                 if (!expanded) {
@@ -519,12 +519,21 @@ private fun HomePanel(
         item {
             Text("Quick access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (bookmarks.isEmpty()) {
-                    items(FAVORITES) { favorite ->
-                        FavoriteCard(favorite = favorite, onClick = { onFavorite(favorite.url) })
+            if (bookmarks.isEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    FAVORITES.forEach { favorite ->
+                        FavoriteCard(
+                            favorite = favorite,
+                            onClick = { onFavorite(favorite.url) },
+                            modifier = Modifier.weight(1f).height(105.dp),
+                        )
                     }
-                } else {
+                }
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(bookmarks.take(8)) { bookmark ->
                         FavoriteCard(
                             favorite = Favorite(bookmark.title, displayAddress(bookmark.url), bookmark.url),
@@ -586,10 +595,14 @@ private val FAVORITES = listOf(
 )
 
 @Composable
-private fun FavoriteCard(favorite: Favorite, onClick: () -> Unit) {
+private fun FavoriteCard(
+    favorite: Favorite,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier.width(142.dp).height(105.dp),
+) {
     Card(
         onClick = onClick,
-        modifier = Modifier.width(142.dp).height(105.dp),
+        modifier = modifier,
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
@@ -611,8 +624,9 @@ private fun FavoriteCard(favorite: Favorite, onClick: () -> Unit) {
 }
 
 @Composable
-private fun GeckoPage(tab: BrowserTab) {
+private fun GeckoPage(activity: MainActivity, tab: BrowserTab) {
     DisposableEffect(tab.id) {
+        activity.ensureSessionOpen(tab)
         tab.session.setActive(true)
         tab.session.setFocused(true)
         onDispose {
@@ -622,9 +636,23 @@ private fun GeckoPage(tab: BrowserTab) {
     }
     AndroidView(
         modifier = Modifier.fillMaxSize(),
-        factory = { context -> GeckoView(context).apply { setSession(tab.session) } },
+        factory = { context ->
+            activity.ensureSessionOpen(tab)
+            GeckoView(context).apply { setSession(tab.session) }
+        },
+        update = { view ->
+            activity.ensureSessionOpen(tab)
+            if (view.session !== tab.session) view.setSession(tab.session)
+        },
         onRelease = { view -> view.releaseSession() },
     )
+    val pendingNavigation = tab.pendingNavigation
+    LaunchedEffect(tab.id, pendingNavigation) {
+        if (pendingNavigation != null) {
+            tab.pendingNavigation = null
+            tab.session.loadUri(pendingNavigation)
+        }
+    }
 }
 
 @Composable

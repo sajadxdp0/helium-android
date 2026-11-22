@@ -6,12 +6,7 @@ import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
 
 class HeliumApplication : Application() {
-    lateinit var runtime: GeckoRuntime
-        private set
-
-    override fun onCreate() {
-        super.onCreate()
-
+    val runtime: GeckoRuntime by lazy {
         val contentBlocking = ContentBlocking.Settings.Builder()
             .antiTracking(
                 ContentBlocking.AntiTracking.DEFAULT or
@@ -21,7 +16,7 @@ class HeliumApplication : Application() {
             .cookieBehavior(ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS)
             .build()
 
-        runtime = GeckoRuntime.create(
+        GeckoRuntime.create(
             this,
             GeckoRuntimeSettings.Builder()
                 .contentBlocking(contentBlocking)

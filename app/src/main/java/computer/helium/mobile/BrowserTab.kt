@@ -13,6 +13,8 @@ class BrowserTab(
     val id: String = UUID.randomUUID().toString(),
 ) {
     var url by mutableStateOf(initialUrl)
+    var pendingNavigation by mutableStateOf(initialUrl.takeIf(String::isNotBlank))
+    var sessionOpened = false
     var title by mutableStateOf("")
     var progress by mutableFloatStateOf(0f)
     var loading by mutableStateOf(false)
