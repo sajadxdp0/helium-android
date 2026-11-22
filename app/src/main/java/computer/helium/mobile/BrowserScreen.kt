@@ -1,8 +1,8 @@
 package computer.helium.mobile
 
 import androidx.activity.compose.BackHandler
+import androidx.core.net.toUri
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -117,11 +117,12 @@ fun BrowserScreen(activity: MainActivity) {
         }
     }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
         val expanded = maxWidth >= 840.dp
         val navigationInsets = if (expanded) {
             Modifier.windowInsetsPadding(WindowInsets.navigationBars)
@@ -181,6 +182,7 @@ fun BrowserScreen(activity: MainActivity) {
                 }
             }
         }
+    }
     }
 
     sheet?.let { visibleSheet ->
@@ -817,7 +819,7 @@ private fun displayAddress(url: String): String {
 
 private object UriDisplay {
     fun parse(value: String): String {
-        val uri = android.net.Uri.parse(value)
+        val uri = value.toUri()
         val host = uri.host ?: return value
         val cleanHost = host.removePrefix("www.")
         val path = uri.encodedPath.orEmpty().takeIf { it.isNotBlank() && it != "/" }.orEmpty()

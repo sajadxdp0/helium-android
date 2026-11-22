@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.edit
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -152,7 +153,7 @@ class MainActivity : ComponentActivity() {
 
     fun selectSearchEngine(index: Int) {
         searchEngineIndex = index.coerceIn(SEARCH_ENGINES.indices)
-        preferences.edit().putInt(PREF_SEARCH_ENGINE, searchEngineIndex).apply()
+        preferences.edit { putInt(PREF_SEARCH_ENGINE, searchEngineIndex) }
     }
 
     fun sharePage() {
@@ -355,16 +356,16 @@ class MainActivity : ComponentActivity() {
         entries.forEach { entry ->
             array.put(org.json.JSONObject().put("title", entry.title).put("url", entry.url))
         }
-        preferences.edit().putString(key, array.toString()).apply()
+        preferences.edit { putString(key, array.toString()) }
     }
 
     private fun saveTabs() {
         val array = JSONArray()
         tabs.forEach { array.put(it.url) }
-        preferences.edit()
-            .putString(PREF_TABS, array.toString())
-            .putInt(PREF_ACTIVE_TAB, tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0))
-            .apply()
+        preferences.edit {
+            putString(PREF_TABS, array.toString())
+            putInt(PREF_ACTIVE_TAB, tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0))
+        }
     }
 
     private fun toast(message: String) {

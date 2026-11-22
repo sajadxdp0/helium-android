@@ -27,9 +27,9 @@ Searches are sent to the selected search provider. Websites receive the requests
 - JDK 17 or newer.
 - Rust toolchain with `aarch64-linux-android` and `x86_64-linux-android` targets, plus `cargo-ndk` (`cargo install cargo-ndk`).
 - Network access to Google's Maven repositories, Mozilla's GeckoView Maven repository, and crates.io on first build.
-- The Gradle wrapper downloads Gradle 9.9.1 the first time it runs if that version is not cached.
+- The Gradle wrapper downloads Gradle 9.9.2 the first time it runs if that version is not cached.
 
-Gradle builds the Rust `cdylib` for arm64 and x86_64 and packages it into the APK. The project uses Android Gradle Plugin 9.4.1, Kotlin 2.4.10, the Compose BOM `2026.09.00`, GeckoView `160.0.20261116130455`, and Rust crate `native/`.
+Gradle builds the Rust `cdylib` for arm64 and x86_64 and packages it into the APK. The project uses Android Gradle Plugin 9.4.1, built-in Kotlin 2.4.10 with the Compose compiler plugin, Compose BOM `2026.11.01`, GeckoView `160.0.20261116130455`, and Rust crate `native/`.
 
 ## Build and install
 
