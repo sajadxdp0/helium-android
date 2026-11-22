@@ -160,6 +160,7 @@ fun BrowserScreen(activity: MainActivity) {
                     if (active == null || active.url.isBlank()) {
                         HomePanel(
                             searchEngine = activity.searchEngine.name,
+                            bookmarks = activity.bookmarkEntries,
                             onFavorite = activity::navigateFromAddress,
                             onPrivacy = { sheet = BrowserSheet.PRIVACY },
                         )
@@ -472,6 +473,7 @@ private fun BrowserNavigationBar(
 @Composable
 private fun HomePanel(
     searchEngine: String,
+    bookmarks: List<BrowserEntry>,
     onFavorite: (String) -> Unit,
     onPrivacy: () -> Unit,
 ) {
@@ -513,11 +515,20 @@ private fun HomePanel(
             }
         }
         item {
-            Text("Your places", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("Quick access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(FAVORITES) { favorite ->
-                    FavoriteCard(favorite = favorite, onClick = { onFavorite(favorite.url) })
+                if (bookmarks.isEmpty()) {
+                    items(FAVORITES) { favorite ->
+                        FavoriteCard(favorite = favorite, onClick = { onFavorite(favorite.url) })
+                    }
+                } else {
+                    items(bookmarks.take(8)) { bookmark ->
+                        FavoriteCard(
+                            favorite = Favorite(bookmark.title, displayAddress(bookmark.url), bookmark.url),
+                            onClick = { onFavorite(bookmark.url) },
+                        )
+                    }
                 }
             }
         }

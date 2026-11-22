@@ -1,6 +1,6 @@
 # Helium for Android
 
-An independent Android browser project inspired by Helium's privacy-first, low-distraction approach. The browser controls use native Android UI built with Jetpack Compose and Material 3. Web pages run in Mozilla GeckoView, a separately embedded browser engine.
+An independent, privacy-minded Android browser inspired by Helium. Android chrome uses Jetpack Compose and Material 3, GeckoView renders web pages, and a Rust native library handles address and search resolution through JNI. Compose and GeckoView remain in Kotlin because GeckoView's Android API is a Java/Kotlin integration point.
 
 > This is an unofficial community project. It is not affiliated with or endorsed by the Helium maintainers.
 
@@ -23,12 +23,13 @@ Searches are sent to the selected search provider. Websites receive the requests
 
 ## Build requirements
 
-- Android SDK Platform 37.2 and Android Build Tools compatible with AGP 9.4 (GeckoView 160 requires compileSdk 37.2 or later).
+- Android SDK Platform 37.2, Android NDK 29, and Android Build Tools compatible with AGP 9.4.
 - JDK 17 or newer.
-- Network access to Google's Maven repositories and Mozilla's GeckoView Maven repository on the first dependency resolution.
-- The Gradle wrapper also downloads Gradle 9.9.1 the first time it runs if that version is not cached.
+- Rust toolchain with `aarch64-linux-android` and `x86_64-linux-android` targets, plus `cargo-ndk` (`cargo install cargo-ndk`).
+- Network access to Google's Maven repositories, Mozilla's GeckoView Maven repository, and crates.io on first build.
+- The Gradle wrapper downloads Gradle 9.9.1 the first time it runs if that version is not cached.
 
-The project uses Android Gradle Plugin 9.4.1, Kotlin 2.4.10, the Compose BOM `2026.09.00`, and GeckoView `160.0.20261116130455`.
+Gradle builds the Rust `cdylib` for arm64 and x86_64 and packages it into the APK. The project uses Android Gradle Plugin 9.4.1, Kotlin 2.4.10, the Compose BOM `2026.09.00`, GeckoView `160.0.20261116130455`, and Rust crate `native/`.
 
 ## Build and install
 
@@ -62,6 +63,4 @@ The supplied `helium-main.zip` is the Helium desktop source repository. Its READ
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for notices about the Helium branding asset and embedded libraries. See [LICENSE](LICENSE) for the project license.
 
-## Repository description
-
-> An independent Android browser inspired by Helium, built with Jetpack Compose and Mozilla GeckoView.
+> An independent Android browser with native Compose UI, GeckoView rendering, and a Rust JNI core.

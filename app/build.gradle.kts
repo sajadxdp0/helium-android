@@ -4,7 +4,34 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val rustJniLibs = layout.buildDirectory.dir("rustJniLibs")
+
+tasks.register<Exec>("buildRustCore") {
+    val outputDirectory = rustJniLibs.get().asFile
+    inputs.files(fileTree(rootProject.file("native")) {
+        exclude("target/**")
+    })
+    environment(
+        "CARGO_TARGET_DIR",
+        layout.buildDirectory.dir("rustTarget").get().asFile.absolutePath,
+    )
+    workingDir(rootProject.file("native"))
+    commandLine(
+        "cargo", "ndk",
+        "-t", "arm64-v8a",
+        "-t", "x86_64",
+        "-o", outputDirectory.absolutePath,
+        "build", "--release",
+        "--manifest-path", rootProject.file("native/Cargo.toml").absolutePath,
+    )
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("buildRustCore")
+}
+
 android {
+    sourceSets.getByName("main").jniLibs.srcDir(rustJniLibs.get().asFile)
     namespace = "computer.helium.mobile"
     compileSdk = 37
     compileSdkMinor = 2

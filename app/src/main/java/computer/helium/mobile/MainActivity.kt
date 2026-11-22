@@ -15,8 +15,6 @@ import org.json.JSONArray
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.StorageController
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
     private val preferences by lazy { getSharedPreferences(PREFERENCES, MODE_PRIVATE) }
@@ -96,13 +94,7 @@ class MainActivity : ComponentActivity() {
         val query = input.trim()
         if (query.isEmpty()) return
 
-        val address = when {
-            query.startsWith("http://", ignoreCase = true) ||
-                query.startsWith("https://", ignoreCase = true) -> query
-            query.startsWith("about:", ignoreCase = true) -> query
-            query.contains(' ') || !query.contains('.') -> searchUrl(query)
-            else -> "https://$query"
-        }
+        val address = RustBrowserCore.resolveAddress(query, searchEngine.template)
         val tab = currentTab ?: run {
             newTab()
             currentTab ?: return
@@ -115,10 +107,7 @@ class MainActivity : ComponentActivity() {
         saveTabs()
     }
 
-    fun searchUrl(query: String): String {
-        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
-        return searchEngine.template.replace("%s", encoded)
-    }
+
 
     fun goHome() {
         currentTab?.let { tab ->
