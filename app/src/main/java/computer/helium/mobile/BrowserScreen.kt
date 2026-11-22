@@ -38,12 +38,12 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -563,7 +563,7 @@ private fun HomePanel(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Icon(Icons.Default.OpenInNew, contentDescription = "Privacy details", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Privacy details", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -675,7 +675,7 @@ private fun MenuSheet(hasPage: Boolean, onAction: (String) -> Unit) {
         }
         MenuAction(Icons.Default.Shield, "Privacy", "Tracking protection details") { onAction("privacy") }
         MenuAction(Icons.Default.Settings, "Settings", "Search and site data") { onAction("settings") }
-        MenuAction(Icons.Default.HelpOutline, "About", "About this independent project") { onAction("about") }
+        MenuAction(Icons.AutoMirrored.Filled.HelpOutline, "About", "About this independent project") { onAction("about") }
         Spacer(Modifier.height(18.dp))
     }
 }
@@ -748,11 +748,12 @@ private fun EntriesSheet(title: String, entries: List<BrowserEntry>, empty: Stri
             LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                 items(entries) { entry ->
                     ListItem(
-                        headlineContent = { Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = { Text(displayAddress(entry.url), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingContent = { Icon(if (title == "Bookmarks") Icons.Default.BookmarkBorder else Icons.Default.History, contentDescription = null) },
                         modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable { onOpen(entry) },
-                    )
+                    ) {
+                        Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }
@@ -803,11 +804,12 @@ private fun MenuAction(
     onClick: () -> Unit,
 ) {
     ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
         supportingContent = { Text(detail) },
         leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick),
-    )
+    ) {
+        Text(title, fontWeight = FontWeight.Medium)
+    }
 }
 
 private fun displayAddress(url: String): String {

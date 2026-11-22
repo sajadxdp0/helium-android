@@ -18,6 +18,8 @@ tasks.register<Exec>("buildRustCore") {
     commandLine(
         "cargo", "ndk",
         "-t", "arm64-v8a",
+        "-t", "armeabi-v7a",
+        "-t", "x86",
         "-t", "x86_64",
         "-o", outputDirectory.absolutePath,
         "build", "--release",
@@ -30,7 +32,7 @@ tasks.named("preBuild").configure {
 }
 
 android {
-    sourceSets.getByName("main").jniLibs.srcDir(rustJniLibs.get().asFile)
+    sourceSets.getByName("main").jniLibs.directories.add(rustJniLibs.get().asFile.absolutePath)
     namespace = "computer.helium.mobile"
     compileSdk = 37
     compileSdkMinor = 2
@@ -41,6 +43,9 @@ android {
         targetSdk = 37
         versionCode = 2
         versionName = "0.2.0"
+        ndk {
+            abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+        }
     }
 
     // Release signing: credentials come from the environment so no secrets
