@@ -23,7 +23,7 @@ Searches are sent to the selected search provider. Websites receive the requests
 
 ## Build requirements
 
-- Android SDK Platform 37 and Android Build Tools compatible with AGP 9.4.
+- Android SDK Platform 37.2 and Android Build Tools compatible with AGP 9.4 (GeckoView 160 requires compileSdk 37.2 or later).
 - JDK 17 or newer.
 - Network access to Google's Maven repositories and Mozilla's GeckoView Maven repository on the first dependency resolution.
 - The Gradle wrapper also downloads Gradle 9.9.1 the first time it runs if that version is not cached.

@@ -17,6 +17,28 @@ android {
         versionName = "0.2.0"
     }
 
+    // Release signing: credentials come from the environment so no secrets
+    // are stored in the repository. See ~/.config/helium-android/signing.env.
+    signingConfigs {
+        create("release") {
+            val keystore = System.getenv("HELIUM_KEYSTORE")
+            if (keystore != null) {
+                storeFile = file(keystore)
+                storePassword = System.getenv("HELIUM_STORE_PASSWORD")
+                keyAlias = System.getenv("HELIUM_KEY_ALIAS")
+                keyPassword = System.getenv("HELIUM_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            if (System.getenv("HELIUM_KEYSTORE") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
