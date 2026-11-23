@@ -25,6 +25,19 @@
 - Clear history, cookies, cached files, and site storage from settings.
 - System-aware light and dark themes, dynamic color on Android 12+, edge-to-edge layout, and an expanded-window navigation rail.
 
+## UI/UX research and decisions
+
+This is a pattern review of official Android browser documentation and store listings, not a usability study. Helium adopts task-focused patterns without copying competitors' visual identity or feature sprawl:
+
+- **Chrome:** its Android address bar can move between the top and bottom, and a toolbar shortcut can be customized. This reinforces address/search as the primary action and thumb reach as a real tradeoff. Helium keeps its top address bar and existing bottom navigation rather than adding another configurable layer.
+- **Firefox:** its home screen supports shortcuts, bookmarks, and return-to-browsing sections. Helium's home already surfaces saved sites and recent pages; keep these user-owned destinations, without adding a news feed.
+- **Samsung Internet:** its bottom toolbar exposes frequent navigation and tab actions. Helium keeps its compact back, forward, home, bookmark, and menu controls at the bottom; tabs remain one tap away beside the address field.
+- **Brave:** Shields is reachable from the address bar and communicates privacy controls in page context. Helium keeps its address-bar privacy entry point but reports only protections it actually implements; it does not invent per-site block counts or controls.
+
+The review identified two avoidable costs in Helium's own browser chrome: the brand tagline consumed space while a page was open, and focusing the URL left the cursor inside the existing address. The brand lockup is now home-only, the tab switcher shares the address row, and focusing the address selects the complete current URL for quick replacement. The existing red identity, personalized home, GeckoView content, and bottom navigation remain intact.
+
+Primary references: [Chrome Android toolbar position](https://support.google.com/chrome/answer/14181646?hl=en&co=GENIE.Platform%3DAndroid), [Chrome toolbar shortcut](https://support.google.com/chrome/answer/14835450?co=GENIE.Platform%3DAndroid&hl=en), [Firefox home screen](https://support.mozilla.org/en-US/kb/customize-firefox-home-screen), [Samsung Internet toolbar](https://www.samsung.com/us/support/answer/ANS10012955/), and [Brave Shields](https://support.brave.com/hc/en-us/articles/360022806212-How-do-I-use-Shields-while-browsing).
+
 ## Browser engine and privacy
 
 This app embeds **Mozilla GeckoView**. It does not use Android System WebView, and it does not contain Helium's Chromium patches or Helium's uBlock Origin fork. GeckoView's built-in tracking protection is not equivalent to Helium desktop's filter set. The app does not yet include extensions, per-site permission controls, private tabs, or a browser download manager.

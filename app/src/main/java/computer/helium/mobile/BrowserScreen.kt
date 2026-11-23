@@ -92,6 +92,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -266,15 +268,18 @@ private fun BrowserHeader(
     onTabs: () -> Unit,
     onPrivacy: () -> Unit,
 ) {
-    var address by remember(active?.id) { mutableStateOf(active?.url.orEmpty()) }
+    var address by remember(active?.id) {
+        mutableStateOf(TextFieldValue(active?.url.orEmpty()))
+    }
     var focused by remember(active?.id) { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val secureConnection = active?.url?.startsWith("https://", ignoreCase = true) == true
     val insecureConnection = active?.url?.startsWith("http://", ignoreCase = true) == true
+    val onHome = active?.url.isNullOrBlank()
 
     LaunchedEffect(active?.id, active?.url) {
-        if (!focused) address = active?.url.orEmpty()
+        if (!focused) address = TextFieldValue(active?.url.orEmpty())
     }
 
     Column(
@@ -285,28 +290,101 @@ private fun BrowserHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                modifier = Modifier.size(30.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFFC83D4F),
+        if (onHome) {
+            Row(
+                modifier = Modifier.fillMaxWidth().widthIn(max = 980.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_helium_mark),
-                    contentDescription = "Helium",
-                    modifier = Modifier.fillMaxSize().padding(3.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                Surface(
+                    modifier = Modifier.size(30.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFC83D4F),
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_helium_mark),
+                        contentDescription = "Helium",
+                        modifier = Modifier.fillMaxSize().padding(3.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                    Text("helium", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.browser_tagline),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                Text("helium", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.browser_tagline),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onTabs) {
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 980.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            OutlinedTextField(
+                value = if (focused) address else TextFieldValue(active?.url.orEmpty().let(::displayAddress)),
+                onValueChange = { address = it },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 54.dp)
+                    .onFocusChanged { state ->
+                        if (state.isFocused && !focused) {
+                            val currentUrl = active?.url.orEmpty()
+                            address = TextFieldValue(
+                                currentUrl,
+                                selection = TextRange(0, currentUrl.length),
+                            )
+                        }
+                        focused = state.isFocused
+                    },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp),
+                placeholder = { Text(stringResource(R.string.address_hint)) },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                leadingIcon = {
+                    IconButton(onClick = onPrivacy) {
+                        Icon(
+                            imageVector = when {
+                                secureConnection -> Icons.Default.Lock
+                                insecureConnection -> Icons.Default.LockOpen
+                                else -> Icons.Default.Shield
+                            },
+                            contentDescription = when {
+                                secureConnection -> "Secure connection. Open privacy details"
+                                insecureConnection -> "Connection is not secure. Open privacy details"
+                                else -> "Privacy protection"
+                            },
+                            tint = if (insecureConnection) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
+                trailingIcon = {
+                    IconButton(onClick = activity::reloadOrStop) {
+                        Icon(
+                            if (active?.loading == true) Icons.Default.Close else Icons.Default.Refresh,
+                            contentDescription = if (active?.loading == true) "Stop loading" else "Reload",
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(
+                    onGo = {
+                        activity.navigateFromAddress(address.text)
+                        focused = false
+                        keyboard?.hide()
+                        focusManager.clearFocus()
+                    },
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.Transparent,
+                ),
+            )
+            IconButton(onClick = onTabs, modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Tab, contentDescription = "Open tabs")
                     Surface(
@@ -321,62 +399,6 @@ private fun BrowserHeader(
                 }
             }
         }
-
-        OutlinedTextField(
-            value = if (focused) address else active?.url.orEmpty().let(::displayAddress),
-            onValueChange = { address = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 980.dp)
-                .heightIn(min = 54.dp)
-                .onFocusChanged { focused = it.isFocused },
-            singleLine = true,
-            shape = RoundedCornerShape(20.dp),
-            placeholder = { Text(stringResource(R.string.address_hint)) },
-            textStyle = MaterialTheme.typography.bodyMedium,
-            leadingIcon = {
-                IconButton(onClick = onPrivacy) {
-                    Icon(
-                        imageVector = when {
-                            secureConnection -> Icons.Default.Lock
-                            insecureConnection -> Icons.Default.LockOpen
-                            else -> Icons.Default.Shield
-                        },
-                        contentDescription = when {
-                            secureConnection -> "Secure connection. Open privacy details"
-                            insecureConnection -> "Connection is not secure. Open privacy details"
-                            else -> "Privacy protection"
-                        },
-                        tint = if (insecureConnection) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                    )
-                }
-            },
-            trailingIcon = {
-                IconButton(
-                    onClick = activity::reloadOrStop,
-                ) {
-                    Icon(
-                        if (active?.loading == true) Icons.Default.Close else Icons.Default.Refresh,
-                        contentDescription = if (active?.loading == true) "Stop loading" else "Reload",
-                    )
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(
-                onGo = {
-                    activity.navigateFromAddress(address)
-                    focused = false
-                    keyboard?.hide()
-                    focusManager.clearFocus()
-                },
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Transparent,
-            ),
-        )
     }
 }
 
