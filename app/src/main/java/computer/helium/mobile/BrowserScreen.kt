@@ -3,6 +3,8 @@ package computer.helium.mobile
 import androidx.activity.compose.BackHandler
 import androidx.core.net.toUri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -89,12 +92,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.lazy.itemsIndexed
 import org.mozilla.geckoview.GeckoView
 
 private enum class BrowserSheet { TABS, MENU, BOOKMARKS, HISTORY, PRIVACY, SETTINGS, ABOUT }
@@ -162,7 +165,8 @@ fun BrowserScreen(activity: MainActivity) {
                         HomePanel(
                             searchEngine = activity.searchEngine.name,
                             bookmarks = activity.bookmarkEntries,
-                            onFavorite = activity::navigateFromAddress,
+                            recentPages = activity.historyEntries,
+                            onOpen = activity::openEntry,
                             onPrivacy = { sheet = BrowserSheet.PRIVACY },
                         )
                     } else {
@@ -467,7 +471,7 @@ private fun BrowserNavigationBar(
             onClick = onBookmark,
             enabled = !active?.url.isNullOrBlank(),
             icon = { Icon(Icons.Default.BookmarkBorder, contentDescription = null) },
-            label = { Text("Save") },
+            label = { Text("Bookmark") },
         )
         NavigationBarItem(
             selected = false,
@@ -482,140 +486,128 @@ private fun BrowserNavigationBar(
 private fun HomePanel(
     searchEngine: String,
     bookmarks: List<BrowserEntry>,
-    onFavorite: (String) -> Unit,
+    recentPages: List<BrowserEntry>,
+    onOpen: (BrowserEntry) -> Unit,
     onPrivacy: () -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 20.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 22.dp, vertical = 22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        modifier = Modifier.size(38.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFC83D4F),
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_helium_mark),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().padding(4.dp),
-                            contentScale = ContentScale.Fit,
-                        )
-                    }
-                    Text(
-                        "A little more room to breathe.",
-                        modifier = Modifier.padding(start = 12.dp),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    "The web, at your pace.",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 42.sp,
-                )
-                Text(
-                    "Search for something, pick up where you left off, or open a favorite.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        item {
-            Text("Quick access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(10.dp))
-            if (bookmarks.isEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    FAVORITES.forEach { favorite ->
-                        FavoriteCard(
-                            favorite = favorite,
-                            onClick = { onFavorite(favorite.url) },
-                            modifier = Modifier.weight(1f).height(105.dp),
-                        )
-                    }
-                }
-            } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(bookmarks.take(8)) { bookmark ->
-                        FavoriteCard(
-                            favorite = Favorite(bookmark.title, displayAddress(bookmark.url), bookmark.url),
-                            onClick = { onFavorite(bookmark.url) },
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            Card(
-                onClick = onPrivacy,
-                modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(18.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(42.dp),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
-                    }
-                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                        Text("Protection is on", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "GeckoView blocks known trackers and limits tracking cookies while you browse.",
-                            modifier = Modifier.padding(top = 4.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Privacy details", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        item {
+        Column(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text(
-                "Searches go to $searchEngine unless you choose another provider in settings.",
-                style = MaterialTheme.typography.labelMedium,
+                "The web, at your pace.",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 42.sp,
+            )
+            Text(
+                if (recentPages.isEmpty() && bookmarks.isEmpty()) {
+                    "Search or enter a website above to get started."
+                } else {
+                    "Pick up where you left off."
+                },
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        if (bookmarks.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth().widthIn(max = 720.dp)) {
+                Text("Saved sites", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    bookmarks.take(8).forEach { bookmark ->
+                        BookmarkCard(bookmark, onClick = { onOpen(bookmark) })
+                    }
+                }
+            }
+        }
+
+        if (recentPages.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth().widthIn(max = 720.dp)) {
+                Text("Recent pages", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                recentPages.take(5).forEach { entry ->
+                    ListItem(
+                        supportingContent = {
+                            Text(displayAddress(entry.url), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        },
+                        leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable(role = Role.Button) { onOpen(entry) },
+                    ) {
+                        Text(
+                            entry.title.ifBlank { displayAddress(entry.url) },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(
+            onClick = onPrivacy,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(42.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text("Protection is on", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Known trackers are restricted while you browse.",
+                        modifier = Modifier.padding(top = 4.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Privacy details", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Text(
+            "Searches go to $searchEngine unless you choose another provider in settings.",
+            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
-private data class Favorite(val name: String, val host: String, val url: String)
-
-private val FAVORITES = listOf(
-    Favorite("Kagi", "kagi.com", "https://kagi.com/"),
-    Favorite("GitHub", "github.com", "https://github.com/"),
-    Favorite("Wikipedia", "wikipedia.org", "https://www.wikipedia.org/"),
-)
-
 @Composable
-private fun FavoriteCard(
-    favorite: Favorite,
+private fun BookmarkCard(
+    bookmark: BrowserEntry,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.width(142.dp).height(105.dp),
 ) {
+    val title = bookmark.title.ifBlank { displayAddress(bookmark.url) }
     Card(
         onClick = onClick,
-        modifier = modifier,
+        modifier = Modifier.width(168.dp).height(105.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
@@ -623,14 +615,18 @@ private fun FavoriteCard(
             modifier = Modifier.fillMaxSize().padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(30.dp)) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(30.dp),
+            ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(favorite.name.first().toString(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(title.firstOrNull()?.uppercaseChar()?.toString().orEmpty(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
             Column {
-                Text(favorite.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(favorite.host, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(displayAddress(bookmark.url), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -680,7 +676,7 @@ private fun TabsSheet(
         SheetHeader("Tabs", trailing = { IconButton(onClick = onNew) { Icon(Icons.Default.Add, "New tab") } })
         if (tabs.isEmpty()) EmptyMessage("No tabs are open.")
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(tabs, key = { it.id }) { tab ->
+            items(tabs, key = { it.id }, contentType = { "tab" }) { tab ->
                 Card(
                     onClick = { onSelect(tab) },
                     shape = RoundedCornerShape(18.dp),
@@ -769,7 +765,7 @@ private fun SettingsSheet(activity: MainActivity, onClear: () -> Unit) {
         Spacer(Modifier.height(14.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Text("Privacy", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 16.dp, bottom = 6.dp))
-        Text("Tracking protection and Global Privacy Control are on. This prototype does not yet offer per-site exceptions.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Tracking protection and Global Privacy Control are on. Per-site exceptions are not available yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(18.dp))
         Button(onClick = onClear, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Icon(Icons.Default.DeleteOutline, contentDescription = null)
@@ -787,7 +783,11 @@ private fun EntriesSheet(title: String, entries: List<BrowserEntry>, empty: Stri
             EmptyMessage(empty)
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                items(entries) { entry ->
+                itemsIndexed(
+                    items = entries,
+                    key = { index, entry -> "$index:${entry.url}" },
+                    contentType = { _, _ -> "browser-entry" },
+                ) { _, entry ->
                     ListItem(
                         supportingContent = { Text(displayAddress(entry.url), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingContent = { Icon(if (title == "Bookmarks") Icons.Default.BookmarkBorder else Icons.Default.History, contentDescription = null) },

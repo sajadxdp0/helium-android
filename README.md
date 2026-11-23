@@ -16,7 +16,7 @@
 
 ## What works
 
-- Native Compose browser chrome, home screen, navigation, tab switcher, menus, and settings.
+- Native Compose browser chrome and a home screen that brings saved sites and recent pages back into reach, alongside navigation, tabs, menus, and settings.
 - GeckoView rendering with a dedicated session for each open tab.
 - Address bar for URLs and searches, with DuckDuckGo, Kagi, Brave Search, and Startpage options.
 - Local bookmarks and recent history.

@@ -15,11 +15,31 @@ fn resolve_address(input: &str, search_template: &str) -> String {
         return query.to_owned();
     }
 
+    if is_loopback_address(query) {
+        return format!("http://{query}");
+    }
+
     if query.contains(' ') || !query.contains('.') {
         return search_template.replace("%s", &encode_query(query));
     }
 
     format!("https://{query}")
+}
+fn is_loopback_address(query: &str) -> bool {
+    let authority = query.split(['/', '?', '#']).next().unwrap_or(query);
+    let host = if let Some(address) = authority.strip_prefix('[') {
+        match address.find(']') {
+            Some(end) => &address[..end],
+            None => return false,
+        }
+    } else {
+        authority.split(':').next().unwrap_or("")
+    };
+
+    host.eq_ignore_ascii_case("localhost")
+        || host
+            .parse::<std::net::IpAddr>()
+            .is_ok_and(|address| address.is_loopback())
 }
 
 fn starts_with_ascii_case_insensitive(value: &str, prefix: &str) -> bool {
@@ -98,6 +118,19 @@ mod tests {
             resolve_address("example.com/path", TEMPLATE),
             "https://example.com/path"
         );
+    }
+
+    #[test]
+    fn opens_loopback_addresses_over_http() {
+        for (input, expected) in [
+            ("localhost", "http://localhost"),
+            ("localhost:3000/settings", "http://localhost:3000/settings"),
+            ("127.0.0.1:8080", "http://127.0.0.1:8080"),
+            ("[::1]:8080", "http://[::1]:8080"),
+            ("localhost.example", "https://localhost.example"),
+        ] {
+            assert_eq!(resolve_address(input, TEMPLATE), expected);
+        }
     }
 
     #[test]
