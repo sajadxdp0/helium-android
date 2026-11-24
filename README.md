@@ -1,22 +1,25 @@
 <p align="center">
-  <img src="helium-mark.svg" alt="Helium geometric H on a red rounded square" width="104">
+  <img src="osmium-mark.svg" alt="Osmium red O-ring mark" width="88">
 </p>
 
-<h1 align="center">Helium for Android</h1>
+<h1 align="center">Osmium Android</h1>
 
 <p align="center">
-  A privacy-minded, native Android browser with a Rust-owned interface and Mozilla GeckoView.
+  A privacy-minded Android browser with a Material 3 Expressive Jetpack Compose UI,
+  a Rust-owned browser core, and Mozilla GeckoView.
 </p>
 
 <p align="center">
-  <a href="https://github.com/sajadxdp0/helium-android/releases/latest">Download the latest release</a>
+  <a href="https://github.com/sajadxdp0/osmium-android/releases/latest">Download the latest release</a>
+  ·
+  <a href="https://github.com/sajadxdp0/osmium-android">Source repository</a>
 </p>
-
-> An independent Android browser project. It uses the Helium name but is not affiliated with the Helium desktop maintainers.
 
 ## Overview
 
-Helium for Android is a lightweight browser built around Android's native view system. Rust owns browser state, navigation, address handling, persistence, update logic, and constructs the UI through JNI. A small Kotlin layer connects Android lifecycle and platform APIs to Mozilla GeckoView, the web engine.
+Osmium Android is a lightweight browser built with a Material 3 Expressive Jetpack Compose interface. Rust owns browser state and browser logic, including navigation, address handling, persistence, and action handling. A small Kotlin layer connects Android lifecycle and platform APIs to Mozilla GeckoView, the web engine.
+
+Osmium keeps the established Android application ID so existing installs can update in place and retain their local browser data; the visible app, namespace, Rust library, and repository are Osmium.
 
 ## Features
 
@@ -31,12 +34,12 @@ Helium for Android is a lightweight browser built around Android's native view s
 
 ## UI/UX research and decisions
 
-This is a pattern review of official Android browser documentation and store listings, not a usability study. Helium adopts task-focused patterns without copying competitors' visual identity or feature sprawl:
+This is a pattern review of official Android browser documentation and store listings, not a usability study. Osmium adopts task-focused patterns without copying competitors' visual identity or feature sprawl:
 
-- **Chrome:** its Android address bar can move between the top and bottom, and a toolbar shortcut can be customized. This reinforces address/search as the primary action and thumb reach as a real tradeoff. Helium keeps its top address bar without adding another configurable layer.
-- **Firefox:** its home screen supports shortcuts, bookmarks, and return-to-browsing sections. Helium surfaces saved sites and recent pages without adding a news feed.
-- **Samsung Internet:** its bottom toolbar exposes frequent navigation and tab actions. Helium keeps compact back, forward, home, bookmark, and menu actions at the bottom.
-- **Brave:** Shields communicates privacy controls in page context. Helium describes only implemented protections; it does not invent per-site block counts or controls.
+- **Chrome:** its Android address bar can move between the top and bottom, and a toolbar shortcut can be customized. This reinforces address/search as the primary action and thumb reach as a real tradeoff. Osmium keeps its top address bar without adding another configurable layer.
+- **Firefox:** its home screen supports shortcuts, bookmarks, and return-to-browsing sections. Osmium surfaces saved sites and recent pages without adding a news feed.
+- **Samsung Internet:** its bottom toolbar exposes frequent navigation and tab actions. Osmium keeps compact back, forward, home, bookmark, and menu actions at the bottom.
+- **Brave:** Shields communicates privacy controls in page context. Osmium describes only implemented protections; it does not invent per-site block counts or controls.
 
 The browser keeps search and navigation central, uses a compact address row and bottom actions, and presents user-owned bookmarks and history on its home screen. The address bar uses a monospace typeface for URL scanning.
 
@@ -44,17 +47,18 @@ Primary references: [Chrome Android toolbar position](https://support.google.com
 
 ## Browser engine and privacy
 
-This app embeds **Mozilla GeckoView** as its web engine. The app code and interface live in this repository; it does not include Helium desktop source code. GeckoView's built-in tracking protection is not equivalent to Helium desktop's filter set. The app does not include extensions, per-site permission controls, private tabs, or a browser download manager.
+Osmium embeds **Mozilla GeckoView** as its web engine. GeckoView's built-in tracking protection is not equivalent to filter lists or protections in other browsers. The app does not include extensions, per-site permission controls, private tabs, or a browser download manager.
 
 Search queries are sent to the selected provider. Websites receive the requests needed to load pages. Location, camera, microphone, and other content permission requests are denied by default.
 
 ## Architecture
 
-- **Rust (`native/`):** browser state, address resolution, bookmarks/history, persistence, action handling, app panels, and native-view construction.
-- **Kotlin (`app/src/main/java/`):** minimal Android Activity lifecycle and JNI adapters for platform intents, update HTTP requests, and GeckoView sessions/views.
+- **Rust (`native/`):** browser state and logic, address resolution, bookmarks/history, persistence, action handling, and app behavior.
+- **Kotlin (`app/src/main/java/`):** Android Activity lifecycle and JNI adapters for platform intents, update HTTP requests, and GeckoView sessions/views.
+- **Jetpack Compose:** Android UI built with Material 3 Expressive.
 - **GeckoView:** third-party browser engine and Android view/session implementation.
 
-The app is not a zero-Kotlin or zero-third-party-engine port. GeckoView is Android's `View`-based API, so Kotlin remains at the platform and engine boundary while app-facing state and UI behavior run in Rust.
+GeckoView is Android's `View`-based API, so Kotlin remains at the platform and engine boundary while Rust owns browser state and logic.
 
 ## Build requirements
 

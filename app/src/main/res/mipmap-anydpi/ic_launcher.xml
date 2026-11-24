@@ -1,5 +1,5 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/helium_launcher_background" />
-    <foreground android:drawable="@drawable/ic_helium_mark" />
-    <monochrome android:drawable="@drawable/ic_helium_monochrome" />
+    <background android:drawable="@color/osmium_launcher_background" />
+    <foreground android:drawable="@drawable/ic_osmium_mark" />
+    <monochrome android:drawable="@drawable/ic_osmium_monochrome" />
 </adaptive-icon>

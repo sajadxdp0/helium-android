@@ -1,4 +1,4 @@
-package computer.helium.mobile
+package com.sajadxdp.osmium
 
 internal object RustBrowserCore {
     const val PAGE_START = 1
@@ -11,7 +11,7 @@ internal object RustBrowserCore {
     const val PAGE_CLOSE = 8
 
     init {
-        System.loadLibrary("helium_core")
+        System.loadLibrary("osmium_core")
     }
 
     fun ensureLoaded() = Unit

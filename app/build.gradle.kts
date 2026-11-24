@@ -1,8 +1,13 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 val rustJniLibs = layout.buildDirectory.dir("rustJniLibs")
+val signingKeystore = System.getenv("OSMIUM_KEYSTORE") ?: System.getenv("HELIUM_KEYSTORE")
+val signingStorePassword = System.getenv("OSMIUM_STORE_PASSWORD") ?: System.getenv("HELIUM_STORE_PASSWORD")
+val signingKeyAlias = System.getenv("OSMIUM_KEY_ALIAS") ?: System.getenv("HELIUM_KEY_ALIAS")
+val signingKeyPassword = System.getenv("OSMIUM_KEY_PASSWORD") ?: System.getenv("HELIUM_KEY_PASSWORD")
 
 tasks.register<Exec>("buildRustCore") {
     val outputDirectory = rustJniLibs.get().asFile
@@ -14,6 +19,9 @@ tasks.register<Exec>("buildRustCore") {
         layout.buildDirectory.dir("rustTarget").get().asFile.absolutePath,
     )
     workingDir(rootProject.file("native"))
+    doFirst {
+        outputDirectory.deleteRecursively()
+    }
     commandLine(
         "cargo", "ndk",
         "-t", "arm64-v8a",
@@ -31,16 +39,17 @@ tasks.named("preBuild").configure {
 
 android {
     sourceSets.getByName("main").jniLibs.directories.add(rustJniLibs.get().asFile.absolutePath)
-    namespace = "computer.helium.mobile"
+    namespace = "com.sajadxdp.osmium"
     compileSdk = 37
     compileSdkMinor = 2
 
     defaultConfig {
+        // Keep the installed-package identity stable so existing users can upgrade without losing app data.
         applicationId = "computer.helium.mobile"
         minSdk = 28
         targetSdk = 37
-        versionCode = 9
-        versionName = "0.4.0"
+        versionCode = 10
+        versionName = "0.5.0"
     }
     splits {
         abi {
@@ -52,25 +61,31 @@ android {
     }
 
     // Release signing: credentials come from the environment so no secrets
-    // are stored in the repository. See ~/.config/helium-android/signing.env.
+    // are stored in the repository. The existing ~/.config/helium-android/signing.env remains supported.
     signingConfigs {
         create("release") {
-            val keystore = System.getenv("HELIUM_KEYSTORE")
-            if (keystore != null) {
-                storeFile = file(keystore)
-                storePassword = System.getenv("HELIUM_STORE_PASSWORD")
-                keyAlias = System.getenv("HELIUM_KEY_ALIAS")
-                keyPassword = System.getenv("HELIUM_KEY_PASSWORD")
+            if (signingKeystore != null) {
+                storeFile = file(signingKeystore)
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
             }
         }
     }
 
     buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".dev"
+        }
         getByName("release") {
-            if (System.getenv("HELIUM_KEYSTORE") != null) {
+            if (signingKeystore != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -87,5 +102,9 @@ android {
 }
 
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("org.mozilla.geckoview:geckoview:160.0.20261116130455")
 }

@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Helium Android"
+rootProject.name = "Osmium Android"
 include(":app")

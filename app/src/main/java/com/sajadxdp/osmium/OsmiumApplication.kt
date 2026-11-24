@@ -1,11 +1,11 @@
-package computer.helium.mobile
+package com.sajadxdp.osmium
 
 import android.app.Application
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
 
-class HeliumApplication : Application() {
+class OsmiumApplication : Application() {
     val runtime: GeckoRuntime by lazy {
         val contentBlocking = ContentBlocking.Settings.Builder()
             .antiTracking(

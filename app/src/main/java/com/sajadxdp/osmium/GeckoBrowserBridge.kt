@@ -1,4 +1,4 @@
-package computer.helium.mobile
+package com.sajadxdp.osmium
 
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
@@ -7,7 +7,7 @@ import org.mozilla.geckoview.StorageController
 
 /** Narrow JNI boundary for GeckoView's Java-only Android View and session API. */
 internal class GeckoBrowserBridge(private val activity: MainActivity) {
-    private val runtime get() = (activity.application as HeliumApplication).runtime
+    private val runtime get() = (activity.application as OsmiumApplication).runtime
     private val sessions = LinkedHashMap<String, GeckoSession>()
     private val views = LinkedHashMap<String, GeckoView>()
     private var activeId: String? = null
@@ -24,14 +24,19 @@ internal class GeckoBrowserBridge(private val activity: MainActivity) {
         return view
     }
 
-    fun existingView(tabId: String): GeckoView? = views[tabId]
-
     fun navigate(tabId: String, url: String) {
         view(tabId)
         sessions[tabId]?.loadUri(url)
     }
 
-    fun activate(tabId: String?) {
+    fun activate(tabId: String?, url: String? = null) {
+        if (tabId != null && sessions[tabId] == null && !url.isNullOrBlank()) {
+            val previous = activeId
+            if (previous != tabId) previous?.let { sessions[it]?.apply { setFocused(false); setActive(false) } }
+            activeId = tabId
+            navigate(tabId, url)
+            return
+        }
         val previous = activeId
         if (previous == tabId) {
             sessions[tabId]?.setFocused(true)
@@ -63,8 +68,8 @@ internal class GeckoBrowserBridge(private val activity: MainActivity) {
     fun clearBrowsingData() {
         closeAll()
         runtime.storageController.clearData(StorageController.ClearFlags.ALL).accept(
-            { activity.runOnUiThread { activity.nativeOnClearDataComplete(true) } },
-            { activity.runOnUiThread { activity.nativeOnClearDataComplete(false) } },
+            { activity.runOnUiThread { activity.onClearDataComplete(true) } },
+            { activity.runOnUiThread { activity.onClearDataComplete(false) } },
         )
     }
 
@@ -76,33 +81,33 @@ internal class GeckoBrowserBridge(private val activity: MainActivity) {
     private fun attachDelegates(tabId: String, session: GeckoSession) {
         session.setProgressDelegate(object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_START, url, 0, false)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_START, url, 0, false)
             }
 
             override fun onProgressChange(session: GeckoSession, progress: Int) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_PROGRESS, null, progress, false)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_PROGRESS, null, progress, false)
             }
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_STOP, null, 0, success)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_STOP, null, 0, success)
             }
         })
         session.setContentDelegate(object : GeckoSession.ContentDelegate {
             override fun onTitleChange(session: GeckoSession, title: String?) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_TITLE, title, 0, false)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_TITLE, title, 0, false)
             }
 
             override fun onCloseRequest(session: GeckoSession) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_CLOSE, null, 0, false)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_CLOSE, null, 0, false)
             }
         })
         session.setNavigationDelegate(object : GeckoSession.NavigationDelegate {
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_CAN_GO_BACK, null, 0, canGoBack)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_CAN_GO_BACK, null, 0, canGoBack)
             }
 
             override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_CAN_GO_FORWARD, null, 0, canGoForward)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_CAN_GO_FORWARD, null, 0, canGoForward)
             }
 
             override fun onLocationChange(
@@ -111,7 +116,7 @@ internal class GeckoBrowserBridge(private val activity: MainActivity) {
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
-                activity.nativeOnPageEvent(tabId, RustBrowserCore.PAGE_LOCATION, url, 0, false)
+                activity.onPageEvent(tabId, RustBrowserCore.PAGE_LOCATION, url, 0, false)
             }
         })
         session.setPermissionDelegate(object : GeckoSession.PermissionDelegate {
