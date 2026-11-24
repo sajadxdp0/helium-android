@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="osmium-mark.svg" alt="Osmium app icon: white O-ring and S on red" width="104">
+  <img src="osmium-mark.svg" alt="Osmium red O-ring mark" width="88">
 </p>
 
 <h1 align="center">Osmium Android</h1>
