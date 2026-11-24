@@ -301,35 +301,68 @@ fn invoke_action<'local>(
     Ok(())
 }
 
+struct PageEvent {
+    tab_id: String,
+    kind: i32,
+    value: Option<String>,
+    number: i32,
+    flag: bool,
+}
+
 fn page_event<'local>(
-    env: &mut JNIEnv<'local>, activity: &JObject<'local>, app: &mut NativeApp,
-    tab_id: &str, event: i32, value: Option<String>, number: i32, flag: bool,
+    env: &mut JNIEnv<'local>,
+    activity: &JObject<'local>,
+    app: &mut NativeApp,
+    event: PageEvent,
 ) -> JniResult<()> {
-    let Some(index) = app.browser.tabs.iter().position(|tab| tab.id == tab_id) else { return Ok(()); };
-    match event {
+    let PageEvent {
+        tab_id,
+        kind,
+        value,
+        number,
+        flag,
+    } = event;
+    let Some(index) = app.browser.tabs.iter().position(|tab| tab.id == tab_id) else {
+        return Ok(());
+    };
+    match kind {
         1 => {
             let tab = &mut app.browser.tabs[index];
-            if let Some(url) = value { if url != "about:blank" || tab.url.is_empty() { tab.url = url; } }
-            tab.loading = true; tab.progress = 0; persist(env, activity, app)?;
+            if let Some(url) = value {
+                if url != "about:blank" || tab.url.is_empty() {
+                    tab.url = url;
+                }
+            }
+            tab.loading = true;
+            tab.progress = 0;
+            persist(env, activity, app)?;
         }
         2 => app.browser.tabs[index].progress = number.clamp(0, 100) as u8,
         3 => {
             app.browser.tabs[index].loading = false;
-            if flag { app.browser.record_visit(tab_id); }
+            if flag {
+                app.browser.record_visit(&tab_id);
+            }
             persist(env, activity, app)?;
         }
-        4 => if let Some(title) = value {
-            app.browser.tabs[index].title = title; app.browser.update_saved_titles(tab_id);
-            persist(env, activity, app)?;
-        },
+        4 => {
+            if let Some(title) = value {
+                app.browser.tabs[index].title = title;
+                app.browser.update_saved_titles(&tab_id);
+                persist(env, activity, app)?;
+            }
+        }
         5 => app.browser.tabs[index].can_go_back = flag,
         6 => app.browser.tabs[index].can_go_forward = flag,
-        7 => if let Some(url) = value {
-            if url != "about:blank" || app.browser.tabs[index].url.is_empty() {
-                app.browser.tabs[index].url = url; persist(env, activity, app)?;
+        7 => {
+            if let Some(url) = value {
+                if url != "about:blank" || app.browser.tabs[index].url.is_empty() {
+                    app.browser.tabs[index].url = url;
+                    persist(env, activity, app)?;
+                }
             }
-        },
-        8 => close_tab(env, activity, app, tab_id)?,
+        }
+        8 => close_tab(env, activity, app, &tab_id)?,
         _ => {}
     }
     Ok(())
@@ -452,8 +485,20 @@ pub extern "system" fn Java_com_sajadxdp_osmium_MainActivity_nativeOnPageEvent<'
 ) -> JString<'local> {
     let tab_id = read_optional_string(&mut env, tab_id).unwrap_or_default();
     let value = read_optional_string(&mut env, value);
-    app_result(&mut env, &activity, move |env, activity, app|
-        page_event(env, activity, app, &tab_id, event, value, number, flag != 0))
+    app_result(&mut env, &activity, move |env, activity, app| {
+        page_event(
+            env,
+            activity,
+            app,
+            PageEvent {
+                tab_id,
+                kind: event,
+                value,
+                number,
+                flag: flag != 0,
+            },
+        )
+    })
 }
 
 #[no_mangle]
