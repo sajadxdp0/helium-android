@@ -11,7 +11,7 @@ const PREF_ACTIVE_TAB: &str = "active_tab";
 const PREF_HISTORY: &str = "history";
 const PREF_BOOKMARKS: &str = "bookmarks";
 const PREF_SEARCH_ENGINE: &str = "search_engine";
-const VERSION: &str = "0.5.0";
+const VERSION: &str = "0.5.1";
 const PROJECT_REPOSITORY: &str = "https://github.com/sajadxdp0/osmium-android";
 const RELEASE_PREFIX: &str = "https://github.com/sajadxdp0/osmium-android/releases/";
 
@@ -535,7 +535,7 @@ mod tests {
     #[test]
     fn compares_release_versions_numerically() {
         assert_eq!(compare_versions("0.10.0", "0.9.9"), Some(Ordering::Greater));
-        assert_eq!(compare_versions("0.5.0", "0.5.0"), Some(Ordering::Equal));
-        assert_eq!(compare_versions("invalid", "0.5.0"), None);
+        assert_eq!(compare_versions("0.5.1", "0.5.1"), Some(Ordering::Equal));
+        assert_eq!(compare_versions("invalid", "0.5.1"), None);
     }
 }

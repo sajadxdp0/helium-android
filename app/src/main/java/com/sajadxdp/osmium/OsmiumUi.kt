@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,11 +31,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -43,6 +43,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
@@ -59,12 +61,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -79,7 +78,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -102,6 +100,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -113,6 +112,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -253,7 +253,7 @@ fun OsmiumApp(
                         "settings" -> SettingsPanel(state, uiDispatch)
                         "about" -> AboutPanel(state, uiDispatch)
                         "privacy" -> PrivacyPanel(uiDispatch)
-                        else -> HomeContent(state, uiDispatch, searchText, { searchText = it }, onSearch)
+                        else -> HomeContent(state, uiDispatch)
                     }
                 }
                 AnimatedVisibility(
@@ -325,7 +325,7 @@ private fun BrowserContent(
             )
         }
         if (state.url.isBlank()) {
-            HomeContent(state, dispatch, searchText, onText = onSearchText, onSearch = onSearch)
+            HomeContent(state, dispatch)
         } else if (state.activeTabId.isNotEmpty()) {
             keyTab(state.activeTabId) {
                 AndroidView(
@@ -335,7 +335,7 @@ private fun BrowserContent(
                 )
             }
         } else {
-            HomeContent(state, dispatch, searchText, onText = onSearchText, onSearch = onSearch)
+            HomeContent(state, dispatch)
         }
     }
 }
@@ -410,91 +410,97 @@ private fun UrlBar(
 }
 
 @Composable
-private fun HomeContent(
-    state: OsmiumUiState,
-    dispatch: (String, String?) -> Unit,
-    searchText: String,
-    onText: (String) -> Unit,
-    onSearch: (String) -> Unit,
-) {
-    val recent = state.bookmarks.take(4)
+private fun HomeContent(state: OsmiumUiState, dispatch: (String, String?) -> Unit) {
+    val favorites = state.bookmarks.take(4)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 26.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 26.dp, bottom = 26.dp),
+        verticalArrangement = Arrangement.spacedBy(30.dp),
     ) {
         item {
-            Column(Modifier.padding(top = 10.dp, bottom = 8.dp)) {
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(22.dp)) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                        Spacer(Modifier.width(8.dp))
-                        Text("OSMIUM", style = MaterialTheme.typography.labelLarge, letterSpacing = 1.8.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OsmiumBrandMark(44.dp, contentDescription = "Osmium")
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Osmium", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("Private by design", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Spacer(Modifier.height(17.dp))
-                Text("A little more\nroom to explore.", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold, lineHeight = 39.sp, color = MaterialTheme.colorScheme.onBackground)
-                Spacer(Modifier.height(7.dp))
-                Text("Private by design. Yours by default.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(28.dp)) {
-                Column(Modifier.padding(18.dp)) {
-                    Text("Start with a search", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = searchText,
-                            onValueChange = onText,
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text("Search the web") },
-                            leadingIcon = { Icon(Icons.Default.Search, null) },
-                            shape = RoundedCornerShape(20.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { onSearch(searchText) }),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        FilledTonalIconButton(onClick = { onSearch(searchText) }, modifier = Modifier.size(54.dp)) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Search")
-                        }
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Favorites", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    if (favorites.isNotEmpty()) {
+                        TextButton(onClick = { dispatch("bookmarks", null) }) { Text("See all") }
                     }
-                    Spacer(Modifier.height(9.dp))
-                    Text("Searches use ${state.searchEngine}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-        }
-        if (recent.isNotEmpty()) {
-            item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Saved for later", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    TextButton(onClick = { dispatch("bookmarks", null) }) { Text("See all") }
-                }
-            }
-            items(recent) { entry ->
-                EntryRow(entry = entry, icon = Icons.Default.Bookmark, onClick = { dispatch("open_entry", entry.url) }, trailing = {})
-            }
-        } else {
-            item {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(22.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.BookmarkBorder, null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Your favorites live here", style = MaterialTheme.typography.titleSmall)
-                            Text("Save a page with the bookmark button.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (favorites.isEmpty()) {
+                    Text(
+                        "Pages you save will appear here.",
+                        modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().height(98.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(favorites, key = { it.url }) { entry ->
+                            FavoriteShortcut(
+                                entry = entry,
+                                modifier = Modifier.width(76.dp),
+                                onClick = { dispatch("open_entry", entry.url) },
+                            )
                         }
                     }
                 }
             }
         }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickAction("Bookmarks", Icons.Default.Bookmark, Modifier.weight(1f)) { dispatch("bookmarks", null) }
-                QuickAction("History", Icons.Default.History, Modifier.weight(1f)) { dispatch("history", null) }
+    }
+}
+
+@Composable
+private fun FavoriteShortcut(entry: OsmiumEntry, modifier: Modifier, onClick: () -> Unit) {
+    val label = entry.title.takeUnless { it.isBlank() || it.startsWith("http://") || it.startsWith("https://") }
+        ?: entry.url.removePrefix("https://").removePrefix("http://").substringBefore('/')
+    Column(
+        modifier = modifier.clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick).padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    label.firstOrNull()?.uppercase() ?: "•",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
         }
+        Spacer(Modifier.height(7.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun OsmiumBrandMark(
+    size: Dp,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
+    Surface(
+        modifier = modifier.size(size),
+        shape = RoundedCornerShape(size * 0.26f),
+        color = Color(0xFFC6283D),
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_osmium_mark),
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
@@ -660,9 +666,7 @@ private fun AboutPanel(state: OsmiumUiState, dispatch: (String, String?) -> Unit
             item {
                 Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(32.dp)) {
                     Column(Modifier.fillMaxWidth().padding(25.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Surface(shape = RoundedCornerShape(25.dp), color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(74.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.OpenInBrowser, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(35.dp)) }
-                        }
+                        OsmiumBrandMark(74.dp)
                         Spacer(Modifier.height(16.dp))
                         Text("Osmium", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text("Version ${state.version}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -670,8 +674,8 @@ private fun AboutPanel(state: OsmiumUiState, dispatch: (String, String?) -> Unit
                 }
             }
             item { SettingTile(Icons.Default.Update, "Updates", state.updateStatus.ifBlank { "Check for the latest release" }) { dispatch("check_updates", null) } }
-            item { SettingTile(Icons.Default.OpenInBrowser, "Release notes", "See the latest changes") { dispatch("open_release", null) } }
-            item { SettingTile(Icons.Default.Info, "Project repository", "Source and community") { dispatch("open_repository", null) } }
+            item { SettingTile(Icons.AutoMirrored.Filled.Article, "Release notes", "See the latest changes") { dispatch("open_release", null) } }
+            item { SettingTile(Icons.Default.Code, "Project repository", "Source and community") { dispatch("open_repository", null) } }
             item { SettingTile(Icons.Default.Shield, "Privacy", "Learn how your data stays yours") { dispatch("privacy", null) } }
         }
     }
@@ -808,14 +812,3 @@ private fun SettingTile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
     }
 }
 
-@Composable
-private fun QuickAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    AssistChip(
-        onClick = onClick,
-        label = { Text(label) },
-        leadingIcon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    )
-}

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="osmium-mark.svg" alt="Osmium red O-ring mark" width="88">
+  <img src="osmium-mark.svg" alt="Osmium app icon: white O-ring and S on red" width="104">
 </p>
 
 <h1 align="center">Osmium Android</h1>
@@ -36,14 +36,14 @@ Osmium keeps the established Android application ID so existing installs can upd
 
 This is a pattern review of official Android browser documentation and store listings, not a usability study. Osmium adopts task-focused patterns without copying competitors' visual identity or feature sprawl:
 
-- **Chrome:** its Android address bar can move between the top and bottom, and a toolbar shortcut can be customized. This reinforces address/search as the primary action and thumb reach as a real tradeoff. Osmium keeps its top address bar without adding another configurable layer.
-- **Firefox:** its home screen supports shortcuts, bookmarks, and return-to-browsing sections. Osmium surfaces saved sites and recent pages without adding a news feed.
+- **Chrome:** its Android New Tab page can show site shortcuts and optionally hide cards or Discover. Osmium keeps the address/search bar and locally saved site shortcuts while omitting feeds and extra cards.
+- **Firefox:** its home screen supports shortcuts, bookmarks, and return-to-browsing sections. Osmium keeps saved sites on its start page and leaves history accessible from the menu.
 - **Samsung Internet:** its bottom toolbar exposes frequent navigation and tab actions. Osmium keeps compact back, forward, home, bookmark, and menu actions at the bottom.
 - **Brave:** Shields communicates privacy controls in page context. Osmium describes only implemented protections; it does not invent per-site block counts or controls.
 
-The browser keeps search and navigation central, uses a compact address row and bottom actions, and presents user-owned bookmarks and history on its home screen. The address bar uses a monospace typeface for URL scanning.
+The new-tab page uses the address bar as the single search entry point, then surfaces the Osmium mark and a small row of saved favorites. Bookmarks and history remain available from the browser menu. The address bar uses a monospace typeface for URL scanning.
 
-Primary references: [Chrome Android toolbar position](https://support.google.com/chrome/answer/14181646?hl=en&co=GENIE.Platform%3DAndroid), [Chrome toolbar shortcut](https://support.google.com/chrome/answer/14835450?co=GENIE.Platform%3DAndroid&hl=en), [Firefox home screen](https://support.mozilla.org/en-US/kb/customize-firefox-home-screen), [Samsung Internet toolbar](https://www.samsung.com/us/support/answer/ANS10012955/), and [Brave Shields](https://support.brave.com/hc/en-us/articles/360022806212-How-do-I-use-Shields-while-browsing).
+Primary references: [Chrome Android New Tab page](https://support.google.com/chrome/answer/11032183?hl=en&co=GENIE.Platform%3DAndroid), [Chrome Android toolbar position](https://support.google.com/chrome/answer/14181646?hl=en&co=GENIE.Platform%3DAndroid), [Chrome toolbar shortcut](https://support.google.com/chrome/answer/14835450?co=GENIE.Platform%3DAndroid&hl=en), [Material 3 icon buttons](https://m3.material.io/components/icon-buttons/guidelines), [Firefox home screen](https://support.mozilla.org/en-US/kb/customize-firefox-home-screen), [Samsung Internet toolbar](https://www.samsung.com/us/support/answer/ANS10012955/), and [Brave Shields](https://support.brave.com/hc/en-us/articles/360022806212-How-do-I-use-Shields-while-browsing).
 
 ## Browser engine and privacy
 
