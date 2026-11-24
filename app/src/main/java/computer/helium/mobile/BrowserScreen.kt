@@ -36,7 +36,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -52,6 +51,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tab
+import androidx.compose.material.icons.filled.AddBox
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -72,6 +74,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -95,6 +98,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -238,7 +242,7 @@ fun BrowserScreen(activity: MainActivity) {
                     activity = activity,
                     onClear = { confirmClear = true; sheet = null },
                 )
-                BrowserSheet.ABOUT -> AboutSheet(activity.aboutMessage())
+                BrowserSheet.ABOUT -> AboutSheet(activity, activity.aboutMessage())
             }
         }
     }
@@ -303,7 +307,7 @@ private fun BrowserHeader(
                     Image(
                         painter = painterResource(R.drawable.ic_helium_mark),
                         contentDescription = "Helium",
-                        modifier = Modifier.fillMaxSize().padding(3.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit,
                     )
                 }
@@ -342,7 +346,7 @@ private fun BrowserHeader(
                 singleLine = true,
                 shape = RoundedCornerShape(20.dp),
                 placeholder = { Text(stringResource(R.string.address_hint)) },
-                textStyle = MaterialTheme.typography.bodyMedium,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                 leadingIcon = {
                     IconButton(onClick = onPrivacy) {
                         Icon(
@@ -695,7 +699,14 @@ private fun TabsSheet(
     onNew: () -> Unit,
 ) {
     SheetColumn {
-        SheetHeader("Tabs", trailing = { IconButton(onClick = onNew) { Icon(Icons.Default.Add, "New tab") } })
+        SheetHeader(
+            "Tabs",
+            trailing = {
+                FilledTonalIconButton(onClick = onNew) {
+                    Icon(Icons.Default.AddBox, contentDescription = "New tab")
+                }
+            },
+        )
         if (tabs.isEmpty()) EmptyMessage("No tabs are open.")
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(tabs, key = { it.id }, contentType = { "tab" }) { tab ->
@@ -710,7 +721,15 @@ private fun TabsSheet(
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(tab.title.ifBlank { if (tab.url.isBlank()) "New tab" else tab.url }, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-                            if (tab.url.isNotBlank()) Text(displayAddress(tab.url), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (tab.url.isNotBlank()) {
+                                Text(
+                                    displayAddress(tab.url),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                         IconButton(onClick = { onClose(tab) }) { Icon(Icons.Default.Close, contentDescription = "Close tab") }
                     }
@@ -724,7 +743,7 @@ private fun TabsSheet(
 private fun MenuSheet(hasPage: Boolean, onAction: (String) -> Unit) {
     SheetColumn {
         SheetHeader("Browse")
-        MenuAction(Icons.Default.Add, "New tab", "Start with a clean page") { onAction("new") }
+        MenuAction(Icons.Default.AddBox, "New tab", "Start with a clean page") { onAction("new") }
         MenuAction(Icons.Default.Tab, "Your tabs", "Switch between open pages") { onAction("tabs") }
         MenuAction(Icons.Default.BookmarkBorder, "Bookmarks", "Pages you saved") { onAction("bookmarks") }
         MenuAction(Icons.Default.History, "Recent pages", "Your local browsing history") { onAction("history") }
@@ -824,10 +843,53 @@ private fun EntriesSheet(title: String, entries: List<BrowserEntry>, empty: Stri
 }
 
 @Composable
-private fun AboutSheet(message: String) {
+private fun AboutSheet(activity: MainActivity, message: String) {
+    var checking by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var releaseUrl by remember { mutableStateOf<String?>(null) }
+
     SheetColumn {
         SheetHeader("About Helium for Android")
         Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = activity::openProjectRepository) {
+            Icon(Icons.Default.Code, contentDescription = null)
+            Text("GitHub repository", modifier = Modifier.padding(start = 8.dp))
+        }
+        status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        Button(
+            onClick = {
+                if (releaseUrl != null) {
+                    releaseUrl?.let(activity::openLatestRelease)
+                } else {
+                    checking = true
+                    status = null
+                    activity.checkForUpdates { current, latest, url, updateAvailable ->
+                        checking = false
+                        releaseUrl = url?.takeIf { updateAvailable }
+                        status = when {
+                            latest == null && url == "" -> "Could not check for updates. Check your connection and try again."
+                            latest == null -> "No published release found."
+                            updateAvailable -> "Version $latest is available (installed $current)."
+                            latest == current -> "You’re up to date · $current."
+                            else -> "Installed $current is ahead of the latest published release ($latest)."
+                        }
+                    }
+                }
+            },
+            enabled = !checking,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(if (releaseUrl == null) Icons.Default.Update else Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+            Text(
+                text = when {
+                    checking -> "Checking…"
+                    releaseUrl != null -> "Download update"
+                    else -> "Check for updates"
+                },
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         Spacer(Modifier.height(28.dp))
     }
 }

@@ -40,8 +40,8 @@ android {
         applicationId = "computer.helium.mobile"
         minSdk = 28
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.3.4"
+        versionCode = 8
+        versionName = "0.3.5"
     }
     splits {
         abi {

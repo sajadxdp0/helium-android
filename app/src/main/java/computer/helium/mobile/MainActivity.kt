@@ -16,6 +16,9 @@ import org.json.JSONArray
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.StorageController
+import android.net.Uri
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : ComponentActivity() {
     private val preferences by lazy { getSharedPreferences(PREFERENCES, MODE_PRIVATE) }
@@ -202,7 +205,58 @@ class MainActivity : ComponentActivity() {
     }
 
     fun aboutMessage(): String =
-        "An independent Android browser inspired by Helium. Its interface is built with Jetpack Compose and its browser engine is Mozilla GeckoView. It is not affiliated with the Helium desktop project."
+        "An independent Android browser using original Kotlin/Compose app code, Mozilla GeckoView as the web engine, and a small Rust URL resolver. No Helium desktop source or artwork is included."
+
+    fun openProjectRepository() {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_REPOSITORY)))
+    }
+
+    fun openLatestRelease(url: String = LATEST_RELEASE) {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+
+    fun checkForUpdates(onResult: (current: String, latest: String?, releaseUrl: String?, updateAvailable: Boolean) -> Unit) {
+        val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        Thread {
+            val result = runCatching {
+                val connection = URL(LATEST_RELEASE_API).openConnection() as HttpURLConnection
+                try {
+                    connection.connectTimeout = 8_000
+                    connection.readTimeout = 8_000
+                    connection.requestMethod = "GET"
+                    connection.setRequestProperty("Accept", "application/vnd.github+json")
+                    connection.setRequestProperty("User-Agent", "Helium-Android")
+                    check(connection.responseCode == HttpURLConnection.HTTP_OK) {
+                        "GitHub returned HTTP ${connection.responseCode}"
+                    }
+                    val release = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val latestVersion = release.getString("tag_name").removePrefix("v")
+                    val releaseUrl = release.optString("html_url").ifBlank { LATEST_RELEASE }
+                    val updateAvailable = compareVersions(latestVersion, currentVersion) > 0
+                    Triple(latestVersion, releaseUrl, updateAvailable)
+                } finally {
+                    connection.disconnect()
+                }
+            }
+            runOnUiThread {
+                result.onSuccess { update ->
+                    onResult(currentVersion, update.first, update.second, update.third)
+                }.onFailure {
+                    onResult(currentVersion, null, "", false)
+                }
+            }
+        }.start()
+    }
+
+    private fun compareVersions(first: String, second: String): Int {
+        val firstParts = first.split('.').map { it.toIntOrNull() ?: throw IllegalArgumentException("Invalid version: $first") }
+        val secondParts = second.split('.').map { it.toIntOrNull() ?: throw IllegalArgumentException("Invalid version: $second") }
+        repeat(maxOf(firstParts.size, secondParts.size)) { index ->
+            val difference = (firstParts.getOrElse(index) { 0 }).compareTo(secondParts.getOrElse(index) { 0 })
+            if (difference != 0) return difference
+        }
+        return 0
+    }
 
     override fun onPause() {
         saveTabs()
@@ -385,6 +439,9 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        const val PROJECT_REPOSITORY = "https://github.com/sajadxdp0/helium-android"
+        private const val LATEST_RELEASE = "$PROJECT_REPOSITORY/releases/latest"
+        private const val LATEST_RELEASE_API = "https://api.github.com/repos/sajadxdp0/helium-android/releases/latest"
         private const val PREFERENCES = "helium_browser"
         private const val PREF_TABS = "tabs"
         private const val PREF_ACTIVE_TAB = "active_tab"

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="helium-mark.svg" alt="Helium snowflake on a red rounded square" width="104">
+  <img src="helium-mark.svg" alt="Helium geometric H on a red rounded square" width="104">
 </p>
 
 <h1 align="center">Helium for Android</h1>
@@ -12,17 +12,18 @@
   <a href="https://github.com/sajadxdp0/helium-android/releases/latest">Download the latest release</a>
 </p>
 
-> An independent community project; not affiliated with or endorsed by the Helium maintainers.
+> An independent Android browser project; it uses the Helium name but is not affiliated with the Helium desktop maintainers.
 
 ## What works
 
-- Native Compose browser chrome and a home screen that brings saved sites and recent pages back into reach, alongside navigation, tabs, menus, and settings.
-- GeckoView rendering with a dedicated session for each open tab.
+- Native Kotlin/Jetpack Compose browser chrome with saved sites, recent pages, navigation, tabs, menus, and settings.
+- Mozilla GeckoView browsing sessions; a small original Rust JNI library resolves URLs and search queries.
 - Address bar for URLs and searches, with DuckDuckGo, Kagi, Brave Search, and Startpage options.
 - Local bookmarks and recent history.
 - Built-in GeckoView tracking protection, restricted third-party tracking cookies, and Global Privacy Control.
 - Site requests for Android permissions are denied by default.
 - Clear history, cookies, cached files, and site storage from settings.
+- Update check against GitHub Releases and direct repository access from About.
 - System-aware light and dark themes, dynamic color on Android 12+, edge-to-edge layout, and an expanded-window navigation rail.
 
 ## UI/UX research and decisions
@@ -34,13 +35,13 @@ This is a pattern review of official Android browser documentation and store lis
 - **Samsung Internet:** its bottom toolbar exposes frequent navigation and tab actions. Helium keeps its compact back, forward, home, bookmark, and menu controls at the bottom; tabs remain one tap away beside the address field.
 - **Brave:** Shields is reachable from the address bar and communicates privacy controls in page context. Helium keeps its address-bar privacy entry point but reports only protections it actually implements; it does not invent per-site block counts or controls.
 
-The review identified two avoidable costs in Helium's own browser chrome: the brand tagline consumed space while a page was open, and focusing the URL left the cursor inside the existing address. The brand lockup is now home-only, the tab switcher shares the address row, and focusing the address selects the complete current URL for quick replacement. The existing red identity, personalized home, GeckoView content, and bottom navigation remain intact.
+The review identified two avoidable costs in the browser chrome: the brand lockup consumed space while a page was open, and focusing the URL left the cursor inside the existing address. The brand lockup is now home-only, the tab switcher shares the address row, and focusing the address selects the complete current URL for quick replacement. The red identity, personalized home, GeckoView content, and bottom navigation remain intact. URLs use monospace text for easier scanning.
 
 Primary references: [Chrome Android toolbar position](https://support.google.com/chrome/answer/14181646?hl=en&co=GENIE.Platform%3DAndroid), [Chrome toolbar shortcut](https://support.google.com/chrome/answer/14835450?co=GENIE.Platform%3DAndroid&hl=en), [Firefox home screen](https://support.mozilla.org/en-US/kb/customize-firefox-home-screen), [Samsung Internet toolbar](https://www.samsung.com/us/support/answer/ANS10012955/), and [Brave Shields](https://support.brave.com/hc/en-us/articles/360022806212-How-do-I-use-Shields-while-browsing).
 
 ## Browser engine and privacy
 
-This app embeds **Mozilla GeckoView**. It does not use Android System WebView, and it does not contain Helium's Chromium patches or Helium's uBlock Origin fork. GeckoView's built-in tracking protection is not equivalent to Helium desktop's filter set. The app does not yet include extensions, per-site permission controls, private tabs, or a browser download manager.
+This app embeds **Mozilla GeckoView** as its web engine. The Android app code is authored in this repository; it does not include Helium desktop source code or branding assets. GeckoView's built-in tracking protection is not equivalent to Helium desktop's filter set. The app does not yet include extensions, per-site permission controls, private tabs, or a browser download manager.
 
 Searches are sent to the selected search provider. Websites receive the requests needed to load the pages you open. Website permission requests for location, camera, microphone, and other content permissions are currently denied by default.
 
@@ -78,15 +79,13 @@ Install the x86_64 emulator build with:
 adb install -r app/build/outputs/apk/debug/app-x86_64-debug.apk
 ```
 
-## Helium references
+## Implementation references
 
-The supplied `helium-main.zip` is the Helium desktop source repository. Its README describes a Chromium-based desktop browser and points to platform packaging and the Helium uBlock Origin fork. Its patches and tooling informed this project's privacy and product direction; they are not an Android implementation and were not copied into this app.
-
-- [Helium desktop project](https://github.com/imputnet/helium)
 - [Mozilla GeckoView consumer guide](https://firefox-source-docs.mozilla.org/mobile/android/geckoview/consumer/geckoview-quick-start.html)
 - [Material 3 in Compose](https://developer.android.com/develop/ui/compose/designsystems/material3)
 - [Compose setup and dependencies](https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler)
+- [Android adaptive icon guidance](https://developer.android.com/develop/ui/views/launch/icon_design_adaptive)
 - [Android edge-to-edge guidance](https://developer.android.com/develop/ui/compose/system/setup-e2e)
 
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for notices about the Helium branding asset and embedded libraries. See [LICENSE](LICENSE) for the project license.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for notices about embedded libraries. See [LICENSE](LICENSE) for the project license.
 
