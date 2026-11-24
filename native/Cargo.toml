@@ -8,4 +8,6 @@ name = "helium_core"
 crate-type = ["cdylib"]
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 jni = "0.21"

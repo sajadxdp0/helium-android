@@ -1,170 +1,98 @@
 package computer.helium.mobile
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.WindowInsets
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.core.content.edit
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import org.json.JSONArray
-import org.mozilla.geckoview.GeckoSession
-import org.mozilla.geckoview.GeckoResult
-import org.mozilla.geckoview.StorageController
-import android.net.Uri
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-class MainActivity : ComponentActivity() {
-    private val preferences by lazy { getSharedPreferences(PREFERENCES, MODE_PRIVATE) }
-    private val tabs = mutableStateListOf<BrowserTab>()
-    private val history = mutableStateListOf<BrowserEntry>()
-    private val bookmarks = mutableStateListOf<BrowserEntry>()
-    private var activeTabId by mutableStateOf("")
-    private var searchEngineIndex by mutableIntStateOf(0)
-    private val runtime: org.mozilla.geckoview.GeckoRuntime
-        get() = (application as HeliumApplication).runtime
+class MainActivity : Activity() {
+    @JvmField
+    var nativeHandle: Long = 0
 
-    val browserTabs: List<BrowserTab> get() = tabs
-    val historyEntries: List<BrowserEntry> get() = history
-    val bookmarkEntries: List<BrowserEntry> get() = bookmarks
-    val searchEngine: SearchEngine get() = SEARCH_ENGINES[searchEngineIndex]
-    val currentTab: BrowserTab?
-        get() = tabs.firstOrNull { it.id == activeTabId } ?: tabs.firstOrNull()
+    private val gecko by lazy { GeckoBrowserBridge(this) }
+    private var backCallback: Any? = null
+
+    external fun nativeOnCreate(savedInstanceState: Bundle?)
+    external fun nativeOnResume()
+    external fun nativeOnPause()
+    external fun nativeOnDestroy()
+    external fun nativeOnBackPressed()
+    external fun nativeOnAction(action: Int, payload: String?)
+    external fun nativeOnNavigate(input: String)
+    external fun nativeOnPageEvent(tabId: String, event: Int, value: String?, number: Int, flag: Boolean)
+    external fun nativeOnClearDataComplete(success: Boolean)
+    external fun nativeOnUpdateResult(tag: String?, url: String?, error: String?)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        searchEngineIndex = preferences.getInt(PREF_SEARCH_ENGINE, 0)
-            .coerceIn(SEARCH_ENGINES.indices)
-        restoreEntries(PREF_HISTORY, history)
-        restoreEntries(PREF_BOOKMARKS, bookmarks)
-        restoreTabs()
-
-        setContent {
-            HeliumTheme {
-                BrowserScreen(activity = this)
-            }
+        RustBrowserCore.ensureLoaded()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val callback = OnBackInvokedCallback { nativeOnBackPressed() }
+            backCallback = callback
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                callback,
+            )
         }
+        nativeOnCreate(savedInstanceState)
     }
 
-    fun newTab(url: String = "") {
-        val session = GeckoSession()
-        val tab = BrowserTab(session = session, initialUrl = url)
-        attachDelegates(tab)
-        tabs.add(tab)
-        activateTab(tab)
-        saveTabs()
+    override fun onResume() {
+        super.onResume()
+        gecko.resume()
+        nativeOnResume()
     }
 
-    fun selectTab(tab: BrowserTab) {
-        if (tab.id == activeTabId) return
-        currentTab?.takeIf { it.sessionOpened }?.let {
-            it.session.setFocused(false)
-            it.session.setActive(false)
+    override fun onPause() {
+        nativeOnPause()
+        gecko.pause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            (backCallback as? OnBackInvokedCallback)?.let(onBackInvokedDispatcher::unregisterOnBackInvokedCallback)
+            backCallback = null
         }
-        activateTab(tab)
-        saveTabs()
+        nativeOnDestroy()
+        gecko.closeAll()
+        super.onDestroy()
     }
 
-    fun closeTab(tab: BrowserTab) {
-        if (tabs.size == 1) {
-            if (tab.sessionOpened) {
-                tab.session.stop()
-                tab.session.close()
-                tab.sessionOpened = false
-            }
-            tabs.remove(tab)
-            activeTabId = ""
-            newTab()
-            return
-        }
-
-        val wasActive = tab.id == activeTabId
-        val oldIndex = tabs.indexOf(tab)
-        if (tab.sessionOpened) {
-            tab.session.setFocused(false)
-            tab.session.setActive(false)
-            tab.session.close()
-            tab.sessionOpened = false
-        }
-        tabs.remove(tab)
-        if (wasActive) activateTab(tabs[oldIndex.coerceAtMost(tabs.lastIndex)])
-        saveTabs()
+    @SuppressLint("GestureBackNavigation")
+    @Deprecated("Use Android system back dispatch.")
+    override fun onBackPressed() {
+        nativeOnBackPressed()
     }
 
-    fun navigateFromAddress(input: String) {
-        val query = input.trim()
-        if (query.isEmpty()) return
+    fun geckoView(tabId: String) = gecko.view(tabId)
+    fun existingGeckoView(tabId: String) = gecko.existingView(tabId)
+    fun activateGeckoTab(tabId: String?) = gecko.activate(tabId)
+    fun navigateGecko(tabId: String, url: String) = gecko.navigate(tabId, url)
+    fun backGecko(tabId: String) = gecko.goBack(tabId)
+    fun forwardGecko(tabId: String) = gecko.goForward(tabId)
+    fun reloadGecko(tabId: String) = gecko.reload(tabId)
+    fun stopGecko(tabId: String) = gecko.stop(tabId)
+    fun closeGeckoTab(tabId: String) = gecko.close(tabId)
+    fun clearGeckoData() = gecko.clearBrowsingData()
+    fun showToast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
-        val address = RustBrowserCore.resolveAddress(query, searchEngine.template)
-        val tab = currentTab ?: run {
-            newTab()
-            currentTab ?: return
-        }
-        tab.url = address
-        tab.title = ""
-        tab.progress = 0f
-        tab.loading = true
-        tab.pendingNavigation = address
-        saveTabs()
+    fun openExternal(url: String) {
+        startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
     }
 
-
-
-    fun goHome() {
-        currentTab?.let { tab ->
-            if (tab.sessionOpened) tab.session.stop()
-            tab.url = ""
-            tab.title = ""
-            tab.loading = false
-            tab.progress = 0f
-            tab.canGoBack = false
-            tab.canGoForward = false
-        }
-        saveTabs()
-    }
-
-    fun goBack() {
-        currentTab?.takeIf { it.canGoBack }?.session?.goBack()
-    }
-
-    fun goForward() {
-        currentTab?.takeIf { it.canGoForward }?.session?.goForward()
-    }
-
-    fun reloadOrStop() {
-        currentTab?.takeIf { it.sessionOpened }?.let { if (it.loading) it.session.stop() else it.session.reload() }
-    }
-
-    fun addBookmark() {
-        val tab = currentTab ?: return
-        if (tab.url.isBlank()) return
-        if (bookmarks.any { it.url == tab.url }) {
-            toast("This page is already bookmarked")
-            return
-        }
-        bookmarks.add(0, BrowserEntry(tab.title.ifBlank { tab.url }, tab.url))
-        persistEntries(PREF_BOOKMARKS, bookmarks)
-        toast("Bookmark saved")
-    }
-
-    fun openEntry(entry: BrowserEntry) {
-        navigateFromAddress(entry.url)
-    }
-
-    fun selectSearchEngine(index: Int) {
-        searchEngineIndex = index.coerceIn(SEARCH_ENGINES.indices)
-        preferences.edit { putInt(PREF_SEARCH_ENGINE, searchEngineIndex) }
-    }
-
-    fun sharePage() {
-        val url = currentTab?.url?.takeIf(String::isNotBlank) ?: return
+    fun shareAddress(url: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
@@ -172,290 +100,75 @@ class MainActivity : ComponentActivity() {
         startActivity(Intent.createChooser(send, "Share page"))
     }
 
-    fun clearBrowsingData() {
-        val sessions = tabs.toList()
-        sessions.forEach { tab ->
-            if (tab.sessionOpened) {
-                tab.session.setFocused(false)
-                tab.session.setActive(false)
-                tab.session.close()
-                tab.sessionOpened = false
-            }
-        }
-        tabs.clear()
-        activeTabId = ""
-        saveTabs()
-        history.clear()
-        persistEntries(PREF_HISTORY, history)
-        runtime.storageController.clearData(StorageController.ClearFlags.ALL)
-            .accept(
-                {
-                    runOnUiThread {
-                        newTab()
-                        toast("Browsing data cleared")
-                    }
-                },
-                {
-                    runOnUiThread {
-                        newTab()
-                        toast("Could not clear all site data")
-                    }
-                },
-            )
-    }
-
-    fun aboutMessage(): String =
-        "An independent Android browser using original Kotlin/Compose app code, Mozilla GeckoView as the web engine, and a small Rust URL resolver. No Helium desktop source or artwork is included."
-
-    fun openProjectRepository() {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_REPOSITORY)))
-    }
-
-    fun openLatestRelease(url: String = LATEST_RELEASE) {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    }
-
-    fun checkForUpdates(onResult: (current: String, latest: String?, releaseUrl: String?, updateAvailable: Boolean) -> Unit) {
-        val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+    fun checkForUpdates() {
         Thread {
             val result = runCatching {
                 val connection = URL(LATEST_RELEASE_API).openConnection() as HttpURLConnection
                 try {
                     connection.connectTimeout = 8_000
                     connection.readTimeout = 8_000
-                    connection.requestMethod = "GET"
                     connection.setRequestProperty("Accept", "application/vnd.github+json")
                     connection.setRequestProperty("User-Agent", "Helium-Android")
                     check(connection.responseCode == HttpURLConnection.HTTP_OK) {
                         "GitHub returned HTTP ${connection.responseCode}"
                     }
-                    val release = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                    val latestVersion = release.getString("tag_name").removePrefix("v")
-                    val releaseUrl = release.optString("html_url").ifBlank { LATEST_RELEASE }
-                    val updateAvailable = compareVersions(latestVersion, currentVersion) > 0
-                    Triple(latestVersion, releaseUrl, updateAvailable)
+                    val release = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    Triple(
+                        release.getString("tag_name"),
+                        release.optString("html_url").ifBlank { LATEST_RELEASE },
+                        null,
+                    )
                 } finally {
                     connection.disconnect()
                 }
             }
             runOnUiThread {
-                result.onSuccess { update ->
-                    onResult(currentVersion, update.first, update.second, update.third)
-                }.onFailure {
-                    onResult(currentVersion, null, "", false)
-                }
+                result.onSuccess { nativeOnUpdateResult(it.first, it.second, null) }
+                    .onFailure { nativeOnUpdateResult(null, null, it.message ?: "Update check failed") }
             }
         }.start()
     }
 
-    private fun compareVersions(first: String, second: String): Int {
-        val firstParts = first.split('.').map { it.toIntOrNull() ?: throw IllegalArgumentException("Invalid version: $first") }
-        val secondParts = second.split('.').map { it.toIntOrNull() ?: throw IllegalArgumentException("Invalid version: $second") }
-        repeat(maxOf(firstParts.size, secondParts.size)) { index ->
-            val difference = (firstParts.getOrElse(index) { 0 }).compareTo(secondParts.getOrElse(index) { 0 })
-            if (difference != 0) return difference
+    fun isDarkTheme(): Boolean =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+
+    @Suppress("DEPRECATION")
+    fun installBrowserRoot(view: View) {
+        val dark = isDarkTheme()
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        } else {
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         }
-        return 0
-    }
-
-    override fun onPause() {
-        saveTabs()
-        currentTab?.takeIf { it.sessionOpened }?.session?.setFocused(false)
-        super.onPause()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        currentTab?.takeIf { it.sessionOpened && it.url.isNotBlank() }?.session?.setFocused(true)
-    }
-
-    override fun onDestroy() {
-        tabs.forEach { tab ->
-            if (tab.sessionOpened) {
-                tab.session.setFocused(false)
-                tab.session.setActive(false)
-                tab.session.close()
-                tab.sessionOpened = false
+        val lightBarFlags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        var visibility = window.decorView.systemUiVisibility and lightBarFlags.inv()
+        if (!dark) visibility = visibility or lightBarFlags
+        window.decorView.systemUiVisibility = visibility
+        view.setOnApplyWindowInsetsListener { root, insets ->
+            val (top, bottom) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                bars.top to bars.bottom
+            } else {
+                insets.systemWindowInsetTop to insets.systemWindowInsetBottom
             }
+            root.setPadding(0, top, 0, bottom)
+            insets
         }
-        super.onDestroy()
+        setContentView(view)
     }
 
-    fun ensureSessionOpen(tab: BrowserTab) {
-        if (tab.sessionOpened) return
-        tab.session.open(runtime)
-        tab.sessionOpened = true
-    }
+    fun appIcon() = packageManager.getApplicationIcon(packageName)
 
-    private fun restoreTabs() {
-        val saved = try {
-            JSONArray(preferences.getString(PREF_TABS, "[]"))
-        } catch (_: Exception) {
-            JSONArray()
-        }
-        val urls = (0 until saved.length()).map(saved::optString)
-        if (urls.isEmpty()) {
-            newTab()
-            return
-        }
+    fun appVersion(): String = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
 
-        urls.forEach { url ->
-            val session = GeckoSession()
-            val tab = BrowserTab(session = session, initialUrl = url)
-            attachDelegates(tab)
-            tabs.add(tab)
-        }
-        val selected = preferences.getInt(PREF_ACTIVE_TAB, 0).coerceIn(tabs.indices)
-        activateTab(tabs[selected])
-    }
-
-    private fun activateTab(tab: BrowserTab) {
-        activeTabId = tab.id
-        if (tab.sessionOpened && tab.url.isNotBlank()) {
-            tab.session.setActive(true)
-            tab.session.setFocused(true)
-        }
-    }
-
-    private fun attachDelegates(tab: BrowserTab) {
-        tab.session.setProgressDelegate(object : GeckoSession.ProgressDelegate {
-            override fun onPageStart(session: GeckoSession, url: String) {
-                if (tab.url != url) {
-                    tab.url = url
-                    saveTabs()
-                }
-                tab.loading = true
-                tab.progress = 0f
-            }
-
-            override fun onProgressChange(session: GeckoSession, progress: Int) {
-                tab.progress = progress.coerceIn(0, 100) / 100f
-            }
-
-            override fun onPageStop(session: GeckoSession, success: Boolean) {
-                tab.loading = false
-                if (success && tab.url.startsWith("http")) recordVisit(tab)
-            }
-        })
-        tab.session.setContentDelegate(object : GeckoSession.ContentDelegate {
-            override fun onTitleChange(session: GeckoSession, title: String?) {
-                tab.title = title.orEmpty()
-            }
-
-            override fun onCloseRequest(session: GeckoSession) {
-                closeTab(tab)
-            }
-        })
-        tab.session.setNavigationDelegate(object : GeckoSession.NavigationDelegate {
-            override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
-                tab.canGoBack = canGoBack
-            }
-
-            override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
-                tab.canGoForward = canGoForward
-            }
-
-            override fun onLocationChange(
-                session: GeckoSession,
-                url: String?,
-                perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
-                hasUserGesture: Boolean,
-            ) {
-                val location = url.orEmpty()
-                if (tab.url != location) {
-                    tab.url = location
-                    saveTabs()
-                }
-            }
-        })
-        tab.session.setPermissionDelegate(object : GeckoSession.PermissionDelegate {
-            override fun onContentPermissionRequest(
-                session: GeckoSession,
-                perm: GeckoSession.PermissionDelegate.ContentPermission,
-            ): GeckoResult<Int> = GeckoResult.fromValue(
-                GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY,
-            )
-
-            override fun onAndroidPermissionsRequest(
-                session: GeckoSession,
-                permissions: Array<String>?,
-                callback: GeckoSession.PermissionDelegate.Callback,
-            ) {
-                callback.reject()
-            }
-
-            override fun onMediaPermissionRequest(
-                session: GeckoSession,
-                uri: String,
-                video: Array<GeckoSession.PermissionDelegate.MediaSource>?,
-                audio: Array<GeckoSession.PermissionDelegate.MediaSource>?,
-                callback: GeckoSession.PermissionDelegate.MediaCallback,
-            ) {
-                callback.reject()
-            }
-        })
-    }
-
-    private fun recordVisit(tab: BrowserTab) {
-        if (tab.url.isBlank() || tab.url == "about:blank") return
-        if (history.firstOrNull()?.url == tab.url) return
-        history.add(0, BrowserEntry(tab.title.ifBlank { tab.url }, tab.url))
-        while (history.size > 100) history.removeAt(history.lastIndex)
-        persistEntries(PREF_HISTORY, history)
-    }
-
-    private fun restoreEntries(key: String, destination: MutableList<BrowserEntry>) {
-        val items = try {
-            JSONArray(preferences.getString(key, "[]"))
-        } catch (_: Exception) {
-            JSONArray()
-        }
-        for (index in 0 until items.length()) {
-            val item = items.optJSONObject(index) ?: continue
-            val url = item.optString("url")
-            if (url.isNotBlank()) destination.add(BrowserEntry(item.optString("title", url), url))
-        }
-    }
-
-    private fun persistEntries(key: String, entries: List<BrowserEntry>) {
-        val array = JSONArray()
-        entries.forEach { entry ->
-            array.put(org.json.JSONObject().put("title", entry.title).put("url", entry.url))
-        }
-        preferences.edit { putString(key, array.toString()) }
-    }
-
-    private fun saveTabs() {
-        val array = JSONArray()
-        tabs.forEach { array.put(it.url) }
-        preferences.edit {
-            putString(PREF_TABS, array.toString())
-            putInt(PREF_ACTIVE_TAB, tabs.indexOfFirst { it.id == activeTabId }.coerceAtLeast(0))
-        }
-    }
-
-    private fun toast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
-
-    companion object {
+    private companion object {
         const val PROJECT_REPOSITORY = "https://github.com/sajadxdp0/helium-android"
-        private const val LATEST_RELEASE = "$PROJECT_REPOSITORY/releases/latest"
-        private const val LATEST_RELEASE_API = "https://api.github.com/repos/sajadxdp0/helium-android/releases/latest"
-        private const val PREFERENCES = "helium_browser"
-        private const val PREF_TABS = "tabs"
-        private const val PREF_ACTIVE_TAB = "active_tab"
-        private const val PREF_HISTORY = "history"
-        private const val PREF_BOOKMARKS = "bookmarks"
-        private const val PREF_SEARCH_ENGINE = "search_engine"
-
-        val SEARCH_ENGINES = listOf(
-            SearchEngine("DuckDuckGo", "https://duckduckgo.com/?q=%s"),
-            SearchEngine("Kagi", "https://kagi.com/search?q=%s"),
-            SearchEngine("Brave Search", "https://search.brave.com/search?q=%s"),
-            SearchEngine("Startpage", "https://www.startpage.com/sp/search?query=%s"),
-        )
+        const val LATEST_RELEASE = "$PROJECT_REPOSITORY/releases/latest"
+        const val LATEST_RELEASE_API = "https://api.github.com/repos/sajadxdp0/helium-android/releases/latest"
     }
 }
-
-data class SearchEngine(val name: String, val template: String)

@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 val rustJniLibs = layout.buildDirectory.dir("rustJniLibs")
@@ -40,8 +39,8 @@ android {
         applicationId = "computer.helium.mobile"
         minSdk = 28
         targetSdk = 37
-        versionCode = 8
-        versionName = "0.3.5"
+        versionCode = 9
+        versionName = "0.4.0"
     }
     splits {
         abi {
@@ -85,18 +84,8 @@ android {
         }
     }
 
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
     implementation("org.mozilla.geckoview:geckoview:160.0.20261116130455")
-    debugImplementation("androidx.compose.ui:ui-tooling")
 }

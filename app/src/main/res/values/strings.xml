@@ -1,5 +1,3 @@
 <resources>
     <string name="app_name">Helium</string>
-    <string name="browser_tagline">A calmer way to browse</string>
-    <string name="address_hint">Search or enter address</string>
 </resources>
