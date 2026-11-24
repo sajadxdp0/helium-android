@@ -56,9 +56,10 @@ internal class GeckoBrowserBridge(private val activity: MainActivity) {
         val session = sessions.remove(tabId) ?: return
         if (activeId == tabId) activeId = null
         session.setFocused(false)
-        session.setActive(false)
-        session.stop()
-        views.remove(tabId)?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) }
+        views.remove(tabId)?.let { view ->
+            view.releaseSession()
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
+        }
         session.close()
     }
 
